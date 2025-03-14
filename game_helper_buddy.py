@@ -57,8 +57,10 @@ def analyze_image_with_llm(image_base64):
         {"role": "system", "content": system_prompt},
         {
             "role": "user",
-            "content": "What's happening in my game right now? Please tell me!",
-            "images": [image_base64]
+            "content": (
+                "What's happening in my game right now? Please tell me!\n\n"
+                "![screenshot](data:image/jpeg;base64,{image_base64})"
+            ).format(image_base64=image_base64)
         }
     ]
     
