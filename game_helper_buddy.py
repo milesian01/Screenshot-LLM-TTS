@@ -13,6 +13,10 @@ import time
 
 import logging
 from datetime import datetime
+import threading
+
+# Global lock for TTS operations
+tts_lock = threading.Lock()
 
 # Set up basic logging
 logging.basicConfig(
@@ -112,23 +116,31 @@ def hotkey_listener():
 
 def speak_response(text):
     """Convert text to child-friendly speech"""
-    try:
-        # Log speaking request
-        logging.info(f"Speaking response: {text}")
-        
-        engine = pyttsx3.init()
-        engine.setProperty('rate', 140)  # Slower speaking speed
-        engine.setProperty('volume', 1.0)
-        
-        # Try to use a more animated voice if available
-        voices = engine.getProperty('voices')
-        if len(voices) > 1:
-            engine.setProperty('voice', voices[1].id)  # Often female-sounding voice
-        
-        engine.say(text)
-        engine.runAndWait()
-    except Exception as e:
-        logging.error(f"Error speaking response: {str(e)}", exc_info=True)
+    with tts_lock:
+        try:
+            logging.info(f"Speaking response: {text}")
+            
+            # Initialize COM for this thread on Windows
+            import comtypes
+            comtypes.CoInitialize()
+            
+            engine = pyttsx3.init()
+            engine.setProperty('rate', 140)  # Slower speaking speed
+            engine.setProperty('volume', 1.0)
+            
+            voices = engine.getProperty('voices')
+            if len(voices) > 1:
+                engine.setProperty('voice', voices[1].id)  # Often female-sounding voice
+            
+            engine.say(text)
+            engine.runAndWait()
+        except Exception as e:
+            logging.error(f"Error speaking response: {str(e)}", exc_info=True)
+        finally:
+            try:
+                comtypes.CoUninitialize()
+            except Exception:
+                pass
 
 
 def on_play_button_click():
