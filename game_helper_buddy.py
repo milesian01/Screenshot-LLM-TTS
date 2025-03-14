@@ -87,12 +87,12 @@ def main():
     root.configure(bg="#2E8B57")
 
     style = ttk.Style()
-style.configure("TButton", 
-                font=("Comic Sans MS", 24, "bold"),
-                padding=20,
-                foreground="#FFD700",
-                background="#4169E1")
-
+    style.configure("TButton", 
+                    font=("Comic Sans MS", 24, "bold"),
+                    padding=20,
+                    foreground="#FFD700",
+                    background="#4169E1")
+    
     button = ttk.Button(root, 
                        text=" What's This? ", 
                        command=on_play_button_click,
