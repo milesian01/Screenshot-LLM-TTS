@@ -109,7 +109,6 @@ def hotkey_listener():
         threading.Thread(target=on_play_button_click, daemon=True).start()
 
     keyboard.add_hotkey('ctrl+shift+s', hotkey_callback)
-    keyboard.wait()  # Keeps the listener active indefinitely.
 
 def speak_response(text):
     """Convert text to child-friendly speech"""
@@ -160,9 +159,8 @@ def on_play_button_click():
 
 def main():
     """Main application entry point"""
-    # Start the global hotkey listener in a daemon thread.
-    hotkey_thread = threading.Thread(target=hotkey_listener, daemon=True)
-    hotkey_thread.start()
+    # Register the global hotkey in the main thread.
+    hotkey_listener()
 
     logging.info("Listening for global hotkey (ctrl+shift+s)...")
     keyboard.wait()  # Keeps the program running and listening for hotkeys.
