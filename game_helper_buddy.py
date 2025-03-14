@@ -18,6 +18,9 @@ import threading
 # Global lock for TTS operations
 tts_lock = threading.Lock()
 
+# Global flag to indicate if processing is underway
+is_processing = False
+
 # Set up basic logging
 logging.basicConfig(
     level=logging.INFO,
@@ -109,9 +112,14 @@ def speak_response(text):
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
     def hotkey_callback():
-        try:
-            logging.info("Hotkey pressed - starting analysis in new thread")
-            threading.Thread(target=on_play_button_click, daemon=True).start()
+        global is_processing
+        if is_processing:
+            logging.info("F5 pressed but pipeline is busy; ignoring input.")
+            return
+            
+        logging.info("Hotkey pressed - starting analysis in new thread")
+        is_processing = True
+        threading.Thread(target=on_play_button_click, daemon=True).start()
         except Exception as e:
             logging.error(f"Error handling hotkey: {str(e)}", exc_info=True)
 
@@ -171,6 +179,8 @@ def on_play_button_click():
         logging.error("Error during analysis", exc_info=True)
         response_text = "Oops! Let's try that again."
     speak_response(response_text)
+    global is_processing
+    is_processing = False
 
 def keep_model_alive():
     """Periodically sends a dummy request to keep the Ollama model loaded."""
