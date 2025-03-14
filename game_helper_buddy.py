@@ -169,11 +169,35 @@ def on_play_button_click():
         response_text = "Oops! Let's try that again."
     speak_response(response_text)
 
+def keep_model_alive():
+    """Periodically sends a dummy request to keep the Ollama model loaded."""
+    while True:
+        time.sleep(25 * 60)  # Sleep for 25 minutes.
+        try:
+            logging.info("Sending keep-alive ping to keep the model loaded.")
+            dummy_message = [{"role": "system", "content": "ping"}]
+            response = requests.post(
+                "http://192.168.50.250:30068/api/chat",
+                json={
+                    "model": "gemma3:27b-it-q8_0",
+                    "messages": dummy_message,
+                    "stream": False
+                },
+                timeout=30
+            )
+            response.raise_for_status()
+            logging.info("Keep-alive response received.")
+        except Exception as e:
+            logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
+
 def main():
     """Main application entry point"""
     # Register the global hotkey in the main thread.
     hotkey_listener()
-
+    
+    # Start the keep-alive thread to keep the model loaded longer.
+    threading.Thread(target=keep_model_alive, daemon=True).start()
+    
     logging.info("Listening for global hotkey (ctrl+shift+s)...")
     keyboard.wait()  # Keeps the program running and listening for hotkeys.
 
