@@ -1,3 +1,4 @@
+import json
 import tkinter as tk
 from tkinter import ttk
 import mss
@@ -67,27 +68,32 @@ def analyze_image_with_llm(image_base64):
     
     try:
         response = requests.post(
-            "http://192.168.50.250:30068/api/generate",
+            "http://192.168.50.250:30068/api/chat",
             json={
-                "model": "gemma3:27b-it-q8_0",  # Your specified model
+                "model": "gemma3:27b-it-q8_0",
                 "messages": messages,
-                "stream": False
-            }
+                "stream": True
+            },
+            timeout=60  # Optional timeout after 60 seconds
         )
         response.raise_for_status()
-        
-        # Log full response data for debugging
-        response_json = response.json()
-        logging.debug("Full API response: %s", response_json)
-        
+
+        accumulated_text = ""
+        for line in response.iter_lines():
+            if line:
+                try:
+                    data = json.loads(line.decode("utf-8"))
+                    if "message" in data:
+                        accumulated_text += data["message"]["content"]
+                except json.JSONDecodeError:
+                    continue
+
         # Log successful response with timing
         elapsed = (datetime.now() - start_time).total_seconds()
         logging.info(f"API request completed in {elapsed:.2f}s")
-        
-        # Safely extract response text, default to empty string if missing
-        response_text = response_json.get("response", "")
-        logging.debug(f"Response text: {response_text}")
-        return response_text
+        logging.debug(f"Accumulated response text: {accumulated_text}")
+
+        return accumulated_text
         
     except Exception as e:
         # Log detailed error information
