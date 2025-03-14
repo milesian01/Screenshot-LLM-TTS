@@ -6,6 +6,7 @@ import base64
 import requests
 import pyttsx3
 import io
+import time
 
 import logging
 from datetime import datetime
@@ -117,6 +118,12 @@ def on_play_button_click():
     logging.info("Button clicked - starting analysis")
     start_time = datetime.now()
     screenshot = capture_screenshot()
+    
+    # Save with a timestamp
+    import time
+    filename = f"debug_screenshot_{int(time.time())}.jpg"
+    screenshot.save(filename)
+    logging.info(f"Screenshot saved as {filename}")
     image_b64 = image_to_base64(screenshot)
     try:
         response_text = analyze_image_with_llm(image_b64)
