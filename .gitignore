@@ -1,1 +1,12 @@
 .aider*
+# Ignore log files
+*.log
+
+# Ignore image files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.webp
