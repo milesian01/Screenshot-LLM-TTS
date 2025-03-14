@@ -30,11 +30,10 @@ def capture_screenshot():
         return Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
 
 def image_to_base64(img):
-    """Convert PIL Image to base64 Data URI string"""
+    """Convert PIL Image to base64 string"""
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG")
-    b64_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    return f"data:image/jpeg;base64,{b64_str}"
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 def analyze_image_with_llm(image_base64):
     """Send screenshot to Ollama LLM with crafted system prompt"""
@@ -59,10 +58,8 @@ def analyze_image_with_llm(image_base64):
         {"role": "system", "content": system_prompt},
         {
             "role": "user",
-            "content": (
-                "What's happening in my game right now? Please tell me!\n\n"
-                "![screenshot](data:image/jpeg;base64,{image_base64})"
-            ).format(image_base64=image_base64)
+            "content": "What's happening in my game right now? Please tell me!",
+            "images": [image_base64]
         }
     ]
     
