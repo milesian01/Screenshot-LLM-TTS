@@ -114,24 +114,6 @@ def speak_response(text):
         logging.info(f"Speaking response: {text}")
         
         engine = pyttsx3.init()
-    engine.setProperty('rate', 140)  # Slower speaking speed
-    engine.setProperty('volume', 1.0)
-    
-    # Try to use a more animated voice if available
-    voices = engine.getProperty('voices')
-    if len(voices) > 1:
-        engine.setProperty('voice', voices[1].id)  # Often female-sounding voice
-    
-    engine.say(text)
-    engine.runAndWait()
-
-def speak_response(text):
-    """Convert text to child-friendly speech"""
-    try:
-        # Log speaking request
-        logging.info(f"Speaking response: {text}")
-        
-        engine = pyttsx3.init()
         engine.setProperty('rate', 140)  # Slower speaking speed
         engine.setProperty('volume', 1.0)
         
@@ -142,8 +124,7 @@ def speak_response(text):
         
         engine.say(text)
         engine.runAndWait()
-    except Exception as e:
-        logging.error(f"Error speaking response: {str(e)}", exc_info=True)
+
 
 def on_play_button_click():
     """Handle button press workflow"""
