@@ -104,7 +104,7 @@ def speak_response(text):
 
 def hotkey_listener():
     """Listen for a global hotkey (Ctrl+Shift+S) and trigger the screenshot analysis."""
-    keyboard.add_hotkey('ctrl+shift+s', on_play_button_click)
+    keyboard.add_hotkey('ctrl+shift+s', lambda: threading.Thread(target=on_play_button_click, daemon=True).start())
     keyboard.wait()  # Keeps the listener active indefinitely.
 
 def speak_response(text):
