@@ -7,6 +7,19 @@ import requests
 import pyttsx3
 import io
 
+import logging
+from datetime import datetime
+
+# Set up basic logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('game_helper_buddy.log'),
+        logging.StreamHandler()
+    ]
+)
+
 def capture_screenshot():
     """Capture full screen screenshot and return as PIL Image"""
     with mss.mss() as sct:
@@ -21,6 +34,11 @@ def image_to_base64(img):
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 def analyze_image_with_llm(image_base64):
+    """Send screenshot to Ollama LLM with crafted system prompt"""
+    
+    # Log request start
+    logging.info("Starting API request")
+    start_time = datetime.now()
     """Send screenshot to Ollama LLM with crafted system prompt"""
     system_prompt = (
         "You are a cheerful play assistant for a 5-year-old child. When shown a game screenshot: "
@@ -53,12 +71,27 @@ def analyze_image_with_llm(image_base64):
             }
         )
         response.raise_for_status()
-        return response.json()["response"]
+        
+        # Log successful response with timing
+        elapsed = (datetime.now() - start_time).total_seconds()
+        logging.info(f"API request completed in {elapsed:.2f}s")
+        
+        response_text = response.json()["response"]
+        logging.debug(f"Response text: {response_text}")
+        return response_text
+        
+    except Exception as e:
+        # Log detailed error information
+        logging.error(f"API request failed: {str(e)}", exc_info=True)
+        return f"Oops! Let's try that again. (error sound)"
     except Exception as e:
         return f"Oops! Let's try that again. (error sound)"
 
 def speak_response(text):
     """Convert text to child-friendly speech"""
+    
+    # Log speaking request
+    logging.info(f"Speaking response: {text}")
     engine = pyttsx3.init()
     engine.setProperty('rate', 140)  # Slower speaking speed
     engine.setProperty('volume', 1.0)
@@ -73,9 +106,22 @@ def speak_response(text):
 
 def on_play_button_click():
     """Handle button press workflow"""
+    
+    # Log button click event
+    logging.info("Button clicked - starting analysis")
+    start_time = datetime.now()
     screenshot = capture_screenshot()
     image_b64 = image_to_base64(screenshot)
-    response_text = analyze_image_with_llm(image_b64)
+    try:
+        response_text = analyze_image_with_llm(image_b64)
+        
+        # Log successful processing with timing
+        elapsed = (datetime.now() - start_time).total_seconds()
+        logging.info(f"Analysis completed in {elapsed:.2f}s")
+        
+    except Exception as e:
+        logging.error("Error during analysis", exc_info=True)
+        response_text = "Oops! Let's try that again."
     speak_response(response_text)
 
 def main():
