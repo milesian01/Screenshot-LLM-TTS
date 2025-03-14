@@ -120,8 +120,6 @@ def hotkey_listener():
         logging.info("Hotkey pressed - starting analysis in new thread")
         is_processing = True
         threading.Thread(target=on_play_button_click, daemon=True).start()
-        except Exception as e:
-            logging.error(f"Error handling hotkey: {str(e)}", exc_info=True)
 
     keyboard.add_hotkey('f5', hotkey_callback)
 
