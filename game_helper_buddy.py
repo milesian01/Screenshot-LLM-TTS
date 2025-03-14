@@ -84,8 +84,6 @@ def analyze_image_with_llm(image_base64):
         # Log detailed error information
         logging.error(f"API request failed: {str(e)}", exc_info=True)
         return f"Oops! Let's try that again. (error sound)"
-    except Exception as e:
-        return f"Oops! Let's try that again. (error sound)"
 
 def speak_response(text):
     """Convert text to child-friendly speech"""
