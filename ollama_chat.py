@@ -1,5 +1,9 @@
 import requests
 import json
+import sys
+
+# Ensure UTF-8 output on Windows
+sys.stdout.reconfigure(encoding='utf-8')
 
 # Ollama server URL
 OLLAMA_URL = "http://192.168.50.250:30068/api/chat"
