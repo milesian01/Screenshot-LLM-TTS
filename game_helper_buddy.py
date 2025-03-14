@@ -28,10 +28,11 @@ def capture_screenshot():
         return Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
 
 def image_to_base64(img):
-    """Convert PIL Image to base64 string"""
+    """Convert PIL Image to base64 Data URI string"""
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG")
-    return base64.b64encode(buffered.getvalue()).decode("utf-8")
+    b64_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    return f"data:image/jpeg;base64,{b64_str}"
 
 def analyze_image_with_llm(image_base64):
     """Send screenshot to Ollama LLM with crafted system prompt"""
