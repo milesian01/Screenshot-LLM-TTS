@@ -1,5 +1,11 @@
+json
+tkinter
+ttk
+keyboard
 pyttsx3==2.90
 requests==2.31.0
 Pillow==10.2.0
 mss==8.0.3
-# python-tk>=0.0  # Cannot be installed via pip
+python-tk==8.6.10
+pykeyboard==0.4.2
+comtypes==1.2.10
