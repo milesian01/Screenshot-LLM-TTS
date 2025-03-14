@@ -82,21 +82,21 @@ def main():
     """Main application entry point"""
     # Create child-friendly GUI
     root = tk.Tk()
-root.title("Game Helper Buddy")
-root.geometry("400x200")
-root.configure(bg="#2E8B57")
+    root.title("Game Helper Buddy")
+    root.geometry("400x200")
+    root.configure(bg="#2E8B57")
 
-style = ttk.Style()
+    style = ttk.Style()
 style.configure("TButton", 
                 font=("Comic Sans MS", 24, "bold"),
                 padding=20,
                 foreground="#FFD700",
                 background="#4169E1")
 
-button = ttk.Button(root, 
-                   text=" What's This? ", 
-                   command=on_play_button_click,
-                   style="TButton")
-button.pack(expand=True, padx=20, pady=20)
-
-root.mainloop()
+    button = ttk.Button(root, 
+                       text=" What's This? ", 
+                       command=on_play_button_click,
+                       style="TButton")
+    button.pack(expand=True, padx=20, pady=20)
+    
+    root.mainloop()
