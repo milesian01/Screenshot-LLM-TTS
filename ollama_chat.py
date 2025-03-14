@@ -1,5 +1,6 @@
 import requests
 import json
+import base64
 import sys
 
 # Ensure UTF-8 output on Windows
@@ -8,11 +9,22 @@ sys.stdout.reconfigure(encoding='utf-8')
 # Ollama server URL
 OLLAMA_URL = "http://192.168.50.250:30068/api/chat"
 
-# Define the request payload
+# Path to your image
+IMAGE_PATH = "C:/test/Screenshot-LLM-TTS/debug_screenshot_1741941837.png"
+
+# Convert image to Base64
+with open(IMAGE_PATH, "rb") as image_file:
+    base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+
+# Define the request payload with an image
 payload = {
     "model": "gemma3:27b-it-q8_0",
     "messages": [
-        {"role": "user", "content": "Hello, can you respond?"}
+        {
+            "role": "user", 
+            "content": "Describe this image.",
+            "images": [base64_image]
+        }
     ]
 }
 
