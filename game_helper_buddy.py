@@ -2,6 +2,8 @@ import json
 import tkinter as tk
 from tkinter import ttk
 import mss
+import keyboard
+import threading
 from PIL import Image
 import base64
 import requests
@@ -99,6 +101,11 @@ def analyze_image_with_llm(image_base64):
 
 def speak_response(text):
     """Convert text to child-friendly speech"""
+
+def hotkey_listener():
+    """Listen for a global hotkey (Ctrl+Shift+S) and trigger the screenshot analysis."""
+    keyboard.add_hotkey('ctrl+shift+s', on_play_button_click)
+    keyboard.wait()  # Keeps the listener active indefinitely.
     
     # Log speaking request
     logging.info(f"Speaking response: {text}")
@@ -142,6 +149,10 @@ def on_play_button_click():
 
 def main():
     """Main application entry point"""
+    # Start the global hotkey listener in a daemon thread.
+    hotkey_thread = threading.Thread(target=hotkey_listener, daemon=True)
+    hotkey_thread.start()
+    
     # Create child-friendly GUI
     root = tk.Tk()
     root.title("Game Helper Buddy")
