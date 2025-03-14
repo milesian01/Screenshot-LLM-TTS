@@ -10,8 +10,19 @@ import requests
 import pyttsx3
 import io
 import time
+import comtypes
 
-import logging
+# Initialize COM in the main thread
+comtypes.CoInitialize()
+
+# Global TTS engine initialization
+tts_engine = pyttsx3.init()
+tts_engine.setProperty('rate', 140)
+tts_engine.setProperty('volume', 1.0)
+
+voices = tts_engine.getProperty('voices')
+if len(voices) > 1:
+    tts_engine.setProperty('voice', voices[1].id)  # Often female-sounding voice
 from datetime import datetime
 import threading
 
@@ -107,7 +118,15 @@ def analyze_image_with_llm(image_base64):
         return f"Oops! Let's try that again. (error sound)"
 
 def speak_response(text):
-    """Convert text to child-friendly speech"""
+    """Convert text to child-friendly speech using a persistent engine."""
+    with tts_lock:
+        try:
+            logging.info(f"Speaking response: {text}")
+            logging.debug("TTS: Starting engine.say()")
+            tts_engine.say(text)
+            logging.debug("TTS: Calling runAndWait()")
+            tts_engine.runAndWait()
+            logging.debug("TTS: runAndWait() returned")
 
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
@@ -166,6 +185,7 @@ def on_play_button_click():
     screenshot.save(filename)
     logging.info(f"Screenshot saved as {filename}")
     image_b64 = image_to_base64(screenshot)
+    
     try:
         response_text = analyze_image_with_llm(image_b64)
         
@@ -176,9 +196,19 @@ def on_play_button_click():
     except Exception as e:
         logging.error("Error during analysis", exc_info=True)
         response_text = "Oops! Let's try that again."
-    speak_response(response_text)
-    global is_processing
-    is_processing = False
+
+    # Run speak_response in a separate thread with timeout
+    tts_thread = threading.Thread(target=speak_response, args=(response_text,))
+    tts_thread.start()
+    
+    # Wait for TTS to complete or timeout after 30 seconds
+    tts_thread.join(timeout=30)
+    if tts_thread.is_alive():
+        logging.error("TTS processing did not complete in the allocated time")
+        
+    finally:
+        global is_processing
+        is_processing = False
 
 def keep_model_alive():
     """Periodically sends a dummy request to keep the Ollama model loaded."""
