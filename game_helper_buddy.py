@@ -127,6 +127,8 @@ def speak_response(text):
             logging.debug("TTS: Calling runAndWait()")
             tts_engine.runAndWait()
             logging.debug("TTS: runAndWait() returned")
+        finally:
+            logging.debug("TTS: Cleanup complete")
 
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
