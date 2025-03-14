@@ -104,7 +104,11 @@ def speak_response(text):
 
 def hotkey_listener():
     """Listen for a global hotkey (Ctrl+Shift+S) and trigger the screenshot analysis."""
-    keyboard.add_hotkey('ctrl+shift+s', lambda: threading.Thread(target=on_play_button_click, daemon=True).start())
+    def hotkey_callback():
+        logging.info("Hotkey pressed - starting analysis in new thread")
+        threading.Thread(target=on_play_button_click, daemon=True).start()
+
+    keyboard.add_hotkey('ctrl+shift+s', hotkey_callback)
     keyboard.wait()  # Keeps the listener active indefinitely.
 
 def speak_response(text):
@@ -159,27 +163,9 @@ def main():
     # Start the global hotkey listener in a daemon thread.
     hotkey_thread = threading.Thread(target=hotkey_listener, daemon=True)
     hotkey_thread.start()
-    
-    # Create child-friendly GUI
-    root = tk.Tk()
-    root.title("Game Helper Buddy")
-    root.geometry("400x200")
-    root.configure(bg="#2E8B57")
 
-    style = ttk.Style()
-    style.configure("TButton", 
-                    font=("Comic Sans MS", 24, "bold"),
-                    padding=20,
-                    foreground="#FFD700",
-                    background="#4169E1")
-    
-    button = ttk.Button(root, 
-                       text=" What's This? ", 
-                       command=on_play_button_click,
-                       style="TButton")
-    button.pack(expand=True, padx=20, pady=20)
-    
-    root.mainloop()
+    logging.info("Listening for global hotkey (ctrl+shift+s)...")
+    keyboard.wait()  # Keeps the program running and listening for hotkeys.
 
 if __name__ == '__main__':
     main()
