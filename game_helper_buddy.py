@@ -109,8 +109,11 @@ def speak_response(text):
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
     def hotkey_callback():
-        logging.info("Hotkey pressed - starting analysis in new thread")
-        threading.Thread(target=on_play_button_click, daemon=True).start()
+        try:
+            logging.info("Hotkey pressed - starting analysis in new thread")
+            threading.Thread(target=on_play_button_click, daemon=True).start()
+        except Exception as e:
+            logging.error(f"Error handling hotkey: {str(e)}", exc_info=True)
 
     keyboard.add_hotkey('f5', hotkey_callback)
 
@@ -198,7 +201,7 @@ def main():
     # Start the keep-alive thread to keep the model loaded longer.
     threading.Thread(target=keep_model_alive, daemon=True).start()
     
-    logging.info("Listening for global hotkey (ctrl+shift+s)...")
+    logging.info("Listening for global hotkey (F5)...")
     keyboard.wait()  # Keeps the program running and listening for hotkeys.
 
 if __name__ == '__main__':
