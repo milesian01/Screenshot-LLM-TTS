@@ -107,12 +107,12 @@ def speak_response(text):
     """Convert text to child-friendly speech"""
 
 def hotkey_listener():
-    """Listen for a global hotkey (Ctrl+Shift+S) and trigger the screenshot analysis."""
+    """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
     def hotkey_callback():
         logging.info("Hotkey pressed - starting analysis in new thread")
         threading.Thread(target=on_play_button_click, daemon=True).start()
 
-    keyboard.add_hotkey('ctrl+shift+s', hotkey_callback)
+    keyboard.add_hotkey('f5', hotkey_callback)
 
 def speak_response(text):
     """Convert text to child-friendly speech"""
