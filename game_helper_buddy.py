@@ -207,10 +207,9 @@ def on_play_button_click():
     tts_thread.join(timeout=30)
     if tts_thread.is_alive():
         logging.error("TTS processing did not complete in the allocated time")
-        
-    finally:
-        global is_processing
-        is_processing = False
+
+    global is_processing
+    is_processing = False
 
 def keep_model_alive():
     """Periodically sends a dummy request to keep the Ollama model loaded."""
