@@ -144,3 +144,6 @@ def main():
     button.pack(expand=True, padx=20, pady=20)
     
     root.mainloop()
+
+if __name__ == '__main__':
+    main()
