@@ -75,11 +75,16 @@ def analyze_image_with_llm(image_base64):
         )
         response.raise_for_status()
         
+        # Log full response data for debugging
+        response_json = response.json()
+        logging.debug("Full API response: %s", response_json)
+        
         # Log successful response with timing
         elapsed = (datetime.now() - start_time).total_seconds()
         logging.info(f"API request completed in {elapsed:.2f}s")
         
-        response_text = response.json()["response"]
+        # Safely extract response text, default to empty string if missing
+        response_text = response_json.get("response", "")
         logging.debug(f"Response text: {response_text}")
         return response_text
         
