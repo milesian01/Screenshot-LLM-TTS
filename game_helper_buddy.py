@@ -124,6 +124,8 @@ def speak_response(text):
         
         engine.say(text)
         engine.runAndWait()
+    except Exception as e:
+        logging.error(f"Error speaking response: {str(e)}", exc_info=True)
 
 
 def on_play_button_click():
