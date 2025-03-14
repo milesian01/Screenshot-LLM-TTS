@@ -45,9 +45,9 @@ def analyze_image_with_llm(image_base64):
     
     try:
         response = requests.post(
-            "http://localhost:11434/api/generate",
+            "http://192.168.50.250:30068/api/generate",
             json={
-                "model": "llava",  # Use your preferred multimodal model
+                "model": "gemma3:27b-it-q8_0",  # Your specified model
                 "messages": messages,
                 "stream": False
             }
