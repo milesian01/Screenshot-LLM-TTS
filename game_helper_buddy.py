@@ -78,8 +78,10 @@ def on_play_button_click():
     response_text = analyze_image_with_llm(image_b64)
     speak_response(response_text)
 
-# Create child-friendly GUI
-root = tk.Tk()
+def main():
+    """Main application entry point"""
+    # Create child-friendly GUI
+    root = tk.Tk()
 root.title("Game Helper Buddy")
 root.geometry("400x200")
 root.configure(bg="#2E8B57")
