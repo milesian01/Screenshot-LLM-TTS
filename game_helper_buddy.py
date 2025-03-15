@@ -214,7 +214,11 @@ def on_play_button_click():
         except Exception as e:
             logging.error("Error during speech synthesis", exc_info=True)
         finally:
-            set_processing_status(False)  # Only clear flag AFTER speaking
+            # Add emergency reset before status update
+            if time.time() - last_processing_time > 30:
+                logging.warning("Emergency status reset")
+            set_processing_status(False)
+            logging.info("Processing status cleared")  # Add confirmation
 
 def keep_model_alive():
     """Periodically sends a lightweight request to keep the server alive."""
