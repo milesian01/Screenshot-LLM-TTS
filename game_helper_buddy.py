@@ -160,11 +160,11 @@ def hotkey_listener():
         global last_processing_time
         try:
             if get_processing_status():
-                # Emergency reset if stuck >2 minutes
+                # Emergency reset check using GLOBAL timestamp  
                 if time.time() - last_processing_time > 120:
                     logging.warning("Force-resetting stuck processing state")
                     set_processing_status(False)
-                
+                        
                 logging.info("F5 pressed but busy")
                 return
 
