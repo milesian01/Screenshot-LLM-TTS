@@ -26,6 +26,8 @@ processing_lock = threading.Lock()
 # Thread-safe processing status variable
 is_processing = False
 
+last_processing_time = 0
+
 def set_processing_status(status):
     """Set the processing status in a thread-safe manner"""
     global is_processing
