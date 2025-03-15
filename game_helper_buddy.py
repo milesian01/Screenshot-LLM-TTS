@@ -152,35 +152,22 @@ def speak_response(text):
             comtypes.CoUninitialize()
 
 def hotkey_listener():
-    """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
-
-    def hotkey_callback():
-        global last_processing_time
+    """Listen/re-register hotkey periodically to recover from failures."""
+    def register_hotkey():
         try:
-            logging.debug("F5 pressed - input received")  # Add debug log
-            
-            if get_processing_status():
-                elapsed = time.time() - last_processing_time
-                logging.debug(f"Busy check: {elapsed:.1f}s since start")
-                
-                # Immediate reset if stuck
-                if elapsed > 30:  # 30 second timeout
-                    logging.warning("Force-resetting processing state")
-                    set_processing_status(False)
-                    return
+            keyboard.remove_hotkey('f5')
+        except KeyError:
+            pass
+        keyboard.add_hotkey('f5', hotkey_callback)
 
-                logging.info("F5 pressed but busy")
-                return
+    def hotkey_watchdog():
+        while True:
+            time.sleep(5)
+            register_hotkey()
+            logging.debug("Hotkey re-registered")
 
-            logging.info("Hotkey pressed - starting analysis")
-            set_processing_status(True)
-            threading.Thread(target=on_play_button_click, daemon=True).start()
-            
-        except Exception as e:
-            logging.error("Hotkey error", exc_info=True)
-            set_processing_status(False)
-
-    keyboard.add_hotkey('f5', hotkey_callback)
+    threading.Thread(target=hotkey_watchdog, daemon=True).start()
+    register_hotkey()
 
 def on_play_button_click():
     """Handle button press workflow"""
