@@ -142,29 +142,29 @@ def speak_response(text):
             
             logging.info(f"Speaking response: {text}")
             engine.say(text)
-            engine.runAndWait()
+            engine.runAndWait()  # This handles the loop automatically
         except Exception as e:
             logging.error("TTS Error", exc_info=True)
         finally:
             if engine:
-                engine.stop()
-                engine.endLoop()
+                # Only stop the engine, don't call endLoop()
+                engine.stop()  # This is sufficient
             comtypes.CoUninitialize()
+            time.sleep(0.1)  # Add small cleanup delay
 
 def hotkey_listener():
-    """Listen/re-register hotkey periodically to recover from failures."""
+    """Listen/re-register hotkey periodically using Ctrl+Shift+F5."""
     def register_hotkey():
         def hotkey_callback():
             global last_processing_time
             try:
-                logging.debug("F5 pressed - input received")  # Add debug log
+                logging.debug("Ctrl+Shift+F5 pressed - input received")
                 
                 if get_processing_status():
                     elapsed = time.time() - last_processing_time
                     logging.debug(f"Busy check: {elapsed:.1f}s since start")
                     
-                    # Immediate reset if stuck
-                    if elapsed > 30:  # 30 second timeout
+                    if elapsed > 30:
                         logging.warning("Force-resetting processing state")
                         set_processing_status(False)
                         return
@@ -178,16 +178,19 @@ def hotkey_listener():
                 set_processing_status(False)
 
         try:
-            keyboard.remove_hotkey('f5')
+            keyboard.remove_hotkey('ctrl+shift+f5')
         except KeyError:
             pass
-        keyboard.add_hotkey('f5', hotkey_callback)
+        keyboard.add_hotkey('ctrl+shift+f5', hotkey_callback)
 
     def hotkey_watchdog():
         while True:
             time.sleep(5)
-            register_hotkey()
-            logging.debug("Hotkey re-registered")
+            try:
+                register_hotkey()
+                logging.debug("Hotkey re-registered")
+            except Exception as e:
+                logging.error("Hotkey watchdog failed", exc_info=True)
 
     threading.Thread(target=hotkey_watchdog, daemon=True).start()
     register_hotkey()
@@ -220,11 +223,15 @@ def on_play_button_click():
         except Exception as e:
             logging.error("Error during speech synthesis", exc_info=True)
         finally:
-            # Add emergency reset before status update
-            if time.time() - last_processing_time > 30:
-                logging.warning("Emergency status reset")
+            # Add additional cleanup
+            try:
+                keyboard.restore_state()  # Reset keyboard state
+            except:
+                pass
+                
+            # Ensure status reset even if multiple errors occur
             set_processing_status(False)
-            logging.info("Processing status cleared")  # Add confirmation
+            logging.info("Processing status cleared")
 
 def keep_model_alive():
     """Periodically sends a lightweight request to keep the server alive."""
@@ -260,7 +267,7 @@ def main():
     
     threading.Thread(target=status_watchdog, daemon=True).start()
     
-    logging.info("Listening for global hotkey (F5)...")
+    logging.info("Listening for global hotkey (Ctrl+Shift+F5)...")
     keyboard.wait()  # Keeps the program running and listening for hotkeys.
 
 if __name__ == '__main__':
