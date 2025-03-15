@@ -171,14 +171,7 @@ def on_play_button_click():
         logging.error("Error during analysis", exc_info=True)
         response_text = "Oops! Let's try that again."
 
-    # Run speak_response in a separate thread with timeout
-    tts_thread = threading.Thread(target=speak_response, args=(response_text,))
-    tts_thread.start()
-    
-    # Wait for TTS to complete or timeout after 30 seconds
-    tts_thread.join(timeout=30)
-    if tts_thread.is_alive():
-        logging.error("TTS processing did not complete in the allocated time")
+    speak_response(response_text)
 
     global is_processing
     is_processing = False
