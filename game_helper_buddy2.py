@@ -27,7 +27,7 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 SIMPLE_SYSTEM_PROMPT = (
-    "Identify speech/text bubbles in the image. Extract the text inside each bubble along with the NPC's name if applicable."
+    "Extract only the exact text from any speech or text bubbles in the image, including the NPC's name if visible. Do not include any additional commentary, explanation, or analysis."
 )
 
 def analyze_image_with_llm(
@@ -155,12 +155,14 @@ def keep_model_alive():
             response = requests.post(
                 "http://192.168.50.250:30068/api/chat",
                 json={"model": "gemma3:27b-it-q8_0", "messages": []},
-                timeout=5
+                timeout=10
             )
             if response.status_code == 200:
                 logging.info("Keep-alive response received.")
             else:
                 logging.warning(f"Keep-alive got non-200: {response.status_code}")
+        except requests.exceptions.ReadTimeout:
+            logging.warning("Keep-alive ping timed out.")
         except Exception as e:
             logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
 
