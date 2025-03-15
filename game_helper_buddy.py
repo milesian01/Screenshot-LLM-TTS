@@ -220,6 +220,10 @@ def keep_model_alive():
 
 def main():
     """Main application entry point"""
+    # Add this verification
+    logging.info(f"Initial processing state: {get_processing_status()}")
+    logging.info(f"Initial last_processing_time: {last_processing_time}")
+    
     # Register the global hotkey in the main thread.
     hotkey_listener()
     
