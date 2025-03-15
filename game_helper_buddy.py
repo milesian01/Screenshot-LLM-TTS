@@ -16,14 +16,6 @@ import comtypes
 # Initialize COM in the main thread
 comtypes.CoInitialize()
 
-# Global TTS engine initialization
-tts_engine = pyttsx3.init()
-tts_engine.setProperty('rate', 140)
-tts_engine.setProperty('volume', 1.0)
-
-voices = tts_engine.getProperty('voices')
-if len(voices) > 1:
-    tts_engine.setProperty('voice', voices[1].id)  # Often female-sounding voice
 from datetime import datetime
 import threading
 
@@ -132,35 +124,45 @@ def analyze_image_with_llm(image_base64):
         return f"Oops! Let's try that again. (error sound)"
 
 def speak_response(text):
-    """Convert text to child-friendly speech using a persistent engine."""
+    """Convert text to child-friendly speech using thread-local TTS engine."""
     with tts_lock:
         try:
+            comtypes.CoInitialize()  # Initialize COM for this thread
+            engine = pyttsx3.init()
+            engine.setProperty('rate', 140)
+            engine.setProperty('volume', 1.0)
+            voices = engine.getProperty('voices')
+            if len(voices) > 1:
+                engine.setProperty('voice', voices[1].id)
+            
             logging.info(f"Speaking response: {text}")
-            logging.debug("TTS: Starting engine.say()")
-            tts_engine.say(text)
-            logging.debug("TTS: Calling runAndWait()")
-            tts_engine.runAndWait()
-            logging.debug("TTS: runAndWait() returned")
+            engine.say(text)
+            engine.runAndWait()
+        except Exception as e:
+            logging.error("Error during speech synthesis", exc_info=True)
         finally:
-            logging.debug("TTS: Cleanup complete")
+            comtypes.CoUninitialize()  # Cleanup COM
 
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
     def hotkey_callback():
-        if get_processing_status():
-            logging.info("F5 pressed but pipeline is busy; ignoring input.")
-            return
+        try:
+            if get_processing_status():
+                logging.info("F5 pressed but pipeline is busy; ignoring input.")
+                return
 
-        logging.info("Hotkey pressed - starting analysis in new thread")
-        set_processing_status(True)
-        threading.Thread(target=on_play_button_click, daemon=True).start()
+            logging.info("Hotkey pressed - starting analysis in new thread")
+            set_processing_status(True)
+            threading.Thread(target=on_play_button_click, daemon=True).start()
+        except Exception as e:
+            logging.error("Hotkey handler crashed", exc_info=True)
+            set_processing_status(False)
 
     keyboard.add_hotkey('f5', hotkey_callback)
 
 def on_play_button_click():
     """Handle button press workflow"""
     try:
-        set_processing_status(True)
         logging.info("Button clicked - starting analysis")
         start_time = datetime.now()
         screenshot = capture_screenshot()
@@ -178,12 +180,13 @@ def on_play_button_click():
         logging.error("Error during analysis", exc_info=True)
         response_text = "Oops! Let's try that again."
     finally:
+        # Move status update INSIDE the speaking block
         try:
             speak_response(response_text)
         except Exception as e:
             logging.error("Error during speech synthesis", exc_info=True)
         finally:
-            set_processing_status(False)
+            set_processing_status(False)  # Only clear flag AFTER speaking
 
 def keep_model_alive():
     """Periodically sends a dummy request to keep the Ollama model loaded."""
