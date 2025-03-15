@@ -26,6 +26,10 @@ DEFAULT_SYSTEM_PROMPT = (
     'The green button says START - that\'s how we begin the adventure!"'
 )
 
+SIMPLE_SYSTEM_PROMPT = (
+    "Identify speech/text bubbles in the image. Extract the text inside each bubble along with the NPC's name if applicable."
+)
+
 def analyze_image_with_llm(
     image_base64,
     prompt=DEFAULT_SYSTEM_PROMPT,
@@ -180,6 +184,41 @@ def pipeline():
         logging.info("Pipeline requested while another is running; ignoring.")
         return
 
+def pipeline_simple():
+    global pipeline_in_progress
+    if pipeline_in_progress:
+        logging.info("Simplified pipeline requested while another is running; ignoring.")
+        return
+
+    pipeline_in_progress = True
+
+    try:
+        logging.info("Simplified pipeline started: capturing screenshot...")
+
+        # Capture screenshot and encode to base64
+        screenshot = pyautogui.screenshot()
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Send to LLM with simplified prompt and model gemma3:1b-it-fp16
+        logging.info("Sending screenshot to simplified LLM...")
+        llm_response = analyze_image_with_llm(
+            image_base64,
+            prompt=SIMPLE_SYSTEM_PROMPT,
+            model="gemma3:1b-it-fp16"
+        )
+
+        speak_response(llm_response)
+
+    finally:
+        logging.info("Simplified pipeline finished")
+        pipeline_in_progress = False
+
+        import os, sys
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
     pipeline_in_progress = True
 
     try:
@@ -235,8 +274,11 @@ def main():
     # Register the hotkey
     global hotkey_registration
     hotkey_registration = keyboard.add_hotkey('f9', pipeline)
+    
+    # Register the simplified pipeline hotkey for F12
+    keyboard.add_hotkey('f12', pipeline_simple)
 
-    logging.info("Ready. Press F9 to capture screenshot and run pipeline. Ctrl+C to exit.")
+    logging.info("Ready. Press F9 to capture screenshot and run pipeline, or F12 for simplified analysis. Ctrl+C to exit.")
 
     # Wait forever (until user kills process)
     keyboard.wait()
