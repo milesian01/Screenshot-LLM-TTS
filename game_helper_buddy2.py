@@ -2,6 +2,7 @@ import threading
 import time
 import logging
 import base64
+from datetime import datetime
 import requests
 import json
 import pyttsx3
@@ -201,7 +202,7 @@ def pipeline():
         speak_response(llm_response)
 
         # Send keep-alive at the end of pipeline
-        send_keep_alive()
+        keep_model_alive()
 
     finally:
         logging.info("Pipeline finished")
@@ -218,7 +219,7 @@ def keep_alive_worker():
     while True:
         time.sleep(120)  # Wait 2 minutes
         if not pipeline_in_progress:
-            send_keep_alive()
+            keep_model_alive()
 
 
 # ----------------------------------------------------------------
