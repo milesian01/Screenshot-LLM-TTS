@@ -1,4 +1,5 @@
 import json
+import logging  # Add this line to import the logging module
 import tkinter as tk
 from tkinter import ttk
 import mss
