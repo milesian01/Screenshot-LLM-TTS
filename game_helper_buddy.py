@@ -27,11 +27,18 @@ if len(voices) > 1:
 from datetime import datetime
 import threading
 
-# Global lock for TTS operations
+# Global locks for thread-safe operations
 tts_lock = threading.Lock()
+processing_lock = threading.Lock()
 
-# Global flag to indicate if processing is underway
+# Thread-safe processing status variable
 is_processing = False
+
+def set_processing_status(status):
+    """Set the processing status in a thread-safe manner"""
+    global is_processing
+    with processing_lock:
+        is_processing = status
 
 # Set up basic logging
 logging.basicConfig(
@@ -135,12 +142,12 @@ def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
     def hotkey_callback():
         global is_processing
-        if is_processing:
+        if get_processing_status():
             logging.info("F5 pressed but pipeline is busy; ignoring input.")
             return
-            
+
         logging.info("Hotkey pressed - starting analysis in new thread")
-        is_processing = True
+        set_processing_status(True)
         threading.Thread(target=on_play_button_click, daemon=True).start()
 
     keyboard.add_hotkey('f5', hotkey_callback)
@@ -171,7 +178,7 @@ def on_play_button_click():
         except Exception as e:
             logging.error("Error during speech synthesis", exc_info=True)
         finally:
-            is_processing = False
+            set_processing_status(False)
 
 def keep_model_alive():
     """Periodically sends a dummy request to keep the Ollama model loaded."""
