@@ -147,34 +147,31 @@ def hotkey_listener():
 
 def on_play_button_click():
     """Handle button press workflow"""
-    
-    # Log button click event
-    logging.info("Button clicked - starting analysis")
-    start_time = datetime.now()
-    screenshot = capture_screenshot()
-    
-    # Save with a timestamp
-    import time
-    filename = f"debug_screenshot_{int(time.time())}.jpg"
-    screenshot.save(filename)
-    logging.info(f"Screenshot saved as {filename}")
-    image_b64 = image_to_base64(screenshot)
-    
+    global is_processing
     try:
+        logging.info("Button clicked - starting analysis")
+        start_time = datetime.now()
+        screenshot = capture_screenshot()
+        
+        filename = f"debug_screenshot_{int(time.time())}.jpg"
+        screenshot.save(filename)
+        logging.info(f"Screenshot saved as {filename}")
+        image_b64 = image_to_base64(screenshot)
+        
         response_text = analyze_image_with_llm(image_b64)
         
-        # Log successful processing with timing
         elapsed = (datetime.now() - start_time).total_seconds()
         logging.info(f"Analysis completed in {elapsed:.2f}s")
-        
     except Exception as e:
         logging.error("Error during analysis", exc_info=True)
         response_text = "Oops! Let's try that again."
-
-    speak_response(response_text)
-
-    global is_processing
-    is_processing = False
+    finally:
+        try:
+            speak_response(response_text)
+        except Exception as e:
+            logging.error("Error during speech synthesis", exc_info=True)
+        finally:
+            is_processing = False
 
 def keep_model_alive():
     """Periodically sends a dummy request to keep the Ollama model loaded."""
