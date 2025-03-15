@@ -188,20 +188,11 @@ def on_play_button_click():
 def keep_model_alive():
     """Periodically sends a dummy request to keep the Ollama model loaded."""
     while True:
-        time.sleep(2 * 60)  # Sleep for 2 minutes.
+        time.sleep(2 * 60 - 10)  # Sleep 10 seconds less than 2 minutes
         try:
             logging.info("Sending keep-alive ping every 2 minutes to keep the model loaded.")
-            dummy_message = [{"role": "system", "content": "ping"}]
-            response = requests.post(
-                "http://192.168.50.250:30068/api/chat",
-                json={
-                    "model": "gemma3:27b-it-q8_0",
-                    "messages": dummy_message,
-                    "stream": False
-                },
-                timeout=30
-            )
-            response.raise_for_status()
+            # Use a different endpoint if available, or shorten timeout
+            requests.get("http://192.168.50.250:30068/", timeout=5)
             logging.info("Keep-alive response received.")
         except Exception as e:
             logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
