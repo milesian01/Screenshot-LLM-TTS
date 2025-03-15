@@ -147,7 +147,6 @@ def speak_response(text):
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
     def hotkey_callback():
-        global is_processing
         if get_processing_status():
             logging.info("F5 pressed but pipeline is busy; ignoring input.")
             return
