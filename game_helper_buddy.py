@@ -154,7 +154,6 @@ def speak_response(text):
 
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
-    last_processing_time = 0
 
     def hotkey_callback():
         global last_processing_time
