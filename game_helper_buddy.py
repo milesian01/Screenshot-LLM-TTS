@@ -152,25 +152,42 @@ def speak_response(text):
     with tts_lock:
         engine = None
         try:
-            comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
+            # Change to apartment-threaded COM initialization
+            comtypes.CoInitializeEx(comtypes.COINIT_APARTMENTTHREADED)
+            
+            # Add timeout for TTS initialization
             engine = pyttsx3.init()
             engine.setProperty('rate', 140)
-            engine.setProperty('volume', 1.0)
-            voices = engine.getProperty('voices')
-            if len(voices) > 1:
-                engine.setProperty('voice', voices[1].id)
+            
+            # Create event for tracking completion
+            done_speaking = threading.Event()
+            
+            def on_end(name, completed):
+                done_speaking.set()
+            
+            engine.connect('finished-utterance', on_end)
             
             logging.info(f"Speaking response: {text}")
-            engine.say(text)
-            engine.runAndWait()  # This handles the loop automatically
+            engine.say(text, 'response')
+            engine.startLoop(False)
+            
+            # Add timeout for speech output
+            while not done_speaking.wait(0.1):
+                if not get_processing_status():
+                    engine.endLoop()
+                    break
+            
         except Exception as e:
             logging.error("TTS Error", exc_info=True)
         finally:
             if engine:
-                # Only stop the engine, don't call endLoop()
-                engine.stop()  # This is sufficient
-            comtypes.CoUninitialize()
-            time.sleep(0.1)  # Add small cleanup delay
+                try:
+                    engine.endLoop()
+                    engine.stop()
+                except:
+                    pass
+            # Remove CoUninitialize() here - let main thread handle COM
+            time.sleep(0.2)
 
 def hotkey_listener():
     """Listen/re-register hotkey periodically using Ctrl+Shift+F5."""
@@ -249,9 +266,9 @@ def on_play_button_click():
             logging.info("Processing status cleared")
 
 def keep_model_alive():
-    """Periodically sends a lightweight request to keep the server alive."""
+    """Keep-alive with shorter interval"""
     while True:
-        time.sleep(2 * 60 - 15)  # Sleep 1:45 minutes
+        time.sleep(55)  # Reduced from 2 minutes to 55 seconds
         try:
             # Use lightweight endpoint check instead of chat
             response = requests.get("http://192.168.50.250:30068/", timeout=5)
