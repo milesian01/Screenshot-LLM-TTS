@@ -201,12 +201,13 @@ def pipeline():
         # Speak out result
         speak_response(llm_response)
 
-        # Send keep-alive at the end of pipeline
-        keep_model_alive()
 
     finally:
         logging.info("Pipeline finished")
         pipeline_in_progress = False  # Release the pipeline lock
+        
+        import os, sys
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 # ----------------------------------------------------------------
