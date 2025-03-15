@@ -167,63 +167,55 @@ def keep_model_alive():
 
 
 # ----------------------------------------------------------------
-# 4) Main pipeline to: (a) screenshot -> (b) LLM -> (c) TTS
+# 4) Revised pipeline functions using wrapper
 # ----------------------------------------------------------------
-pipeline_in_progress = False
-
-def pipeline_wrapper(target_func):
-    """Handles pipeline execution in a thread with state management"""
-    global pipeline_in_progress
-    
-    if pipeline_in_progress:
-        logging.info("Pipeline already running - ignoring request")
-        return
-    
-    def wrapper():
-        global pipeline_in_progress
-        try:
-            pipeline_in_progress = True
-            target_func()
-        finally:
-            pipeline_in_progress = False
-            
-    threading.Thread(target=wrapper, daemon=True).start()
-
-def pipeline_simple():
-    """Simplified version of the pipeline that only extracts text"""
-    global pipeline_in_progress
-    
-    if pipeline_in_progress:
-        logging.info("Simplified pipeline requested while another is running; ignoring.")
-        return
-
-    pipeline_in_progress = True  # Set the flag
-
+def pipeline():
+    """Full analysis pipeline"""
     try:
         logging.info("Pipeline started: capturing screenshot...")
-
-        # Take a screenshot
+        
+        # Capture screenshot
         screenshot = pyautogui.screenshot()
-
+        
         # Encode to base64
         with BytesIO() as buf:
             screenshot.save(buf, format="PNG")
             image_data = buf.getvalue()
         image_base64 = base64.b64encode(image_data).decode("utf-8")
 
-        # Send to Ollama
+        # Send to LLM with default prompt
         logging.info("Sending screenshot to LLM...")
         llm_response = analyze_image_with_llm(image_base64)
 
-        # Speak out result
+        # Speak result
         speak_response(llm_response)
 
-    finally:
-        logging.info("Pipeline finished")
-        pipeline_in_progress = False  # Release the lock
+    except Exception as e:
+        logging.error(f"Pipeline failed: {str(e)}", exc_info=True)
 
-        # No restart needed - we're using threads now
-    global pipeline_in_progress
+def pipeline_simple():
+    """Simplified text extraction pipeline"""
+    try:
+        logging.info("Simplified pipeline started...")
+        
+        # Capture screenshot (same as regular pipeline)
+        screenshot = pyautogui.screenshot()
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Send to LLM with simple prompt and 4b model
+        llm_response = analyze_image_with_llm(
+            image_base64,
+            prompt=SIMPLE_SYSTEM_PROMPT,
+            model="gemma3:4b"  # Verify this is the correct model name
+        )
+
+        speak_response(llm_response)
+
+    except Exception as e:
+        logging.error(f"Simple pipeline failed: {str(e)}", exc_info=True)
 
 
 # ----------------------------------------------------------------
