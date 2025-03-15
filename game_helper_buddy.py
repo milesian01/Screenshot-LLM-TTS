@@ -191,11 +191,13 @@ def keep_model_alive():
         time.sleep(2 * 60 - 10)  # Sleep 10 seconds less than 2 minutes
         try:
             logging.info("Sending keep-alive ping every 2 minutes to keep the model loaded.")
-            requests.post(
+            response = requests.post(
                 "http://192.168.50.250:30068/api/chat",
                 json={"model": "gemma3:27b-it-q8_0", "messages": []},
                 timeout=5
-            logging.info("Keep-alive response received.")
+            )
+            if response.status_code == 200:
+                logging.info("Keep-alive response received.")
         except Exception as e:
             logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
 
