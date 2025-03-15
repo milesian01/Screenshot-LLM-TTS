@@ -271,12 +271,11 @@ def main():
     # Start background keep-alive thread
     threading.Thread(target=keep_model_alive, daemon=True).start()
 
-    # Register the hotkey
-    global hotkey_registration
-    hotkey_registration = keyboard.add_hotkey('f9', pipeline)
+    # Register the hotkey with progress check
+    keyboard.on_press_key('f9', lambda event: pipeline() if not pipeline_in_progress else None)
     
-    # Register the simplified pipeline hotkey for F12
-    keyboard.add_hotkey('f12', pipeline_simple)
+    # Register the simplified pipeline hotkey for F12 with progress check
+    keyboard.on_press_key('f12', lambda event: pipeline_simple() if not pipeline_in_progress else None)
 
     logging.info("Ready. Press F9 to capture screenshot and run pipeline, or F12 for simplified analysis. Ctrl+C to exit.")
 
