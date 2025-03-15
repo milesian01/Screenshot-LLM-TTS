@@ -189,12 +189,12 @@ def pipeline_wrapper(target_func):
             
     threading.Thread(target=wrapper, daemon=True).start()
 
-def pipeline():
-
+def pipeline_simple():
+    """Simplified version of the pipeline that only extracts text"""
+    global pipeline_in_progress
+    
     if pipeline_in_progress:
-        # If we want to ignore re-trigger while in progress, just return.
-        # This ensures no overlapping triggers.
-        logging.info("Pipeline requested while another is running; ignoring.")
+        logging.info("Simplified pipeline requested while another is running; ignoring.")
         return
 
     pipeline_in_progress = True  # Set the flag
@@ -224,37 +224,6 @@ def pipeline():
 
         # No restart needed - we're using threads now
     global pipeline_in_progress
-    if pipeline_in_progress:
-        logging.info("Simplified pipeline requested while another is running; ignoring.")
-        return
-
-    pipeline_in_progress = True
-
-    try:
-        logging.info("Simplified pipeline started: capturing screenshot...")
-
-        # Capture screenshot and encode to base64
-        screenshot = pyautogui.screenshot()
-        with BytesIO() as buf:
-            screenshot.save(buf, format="PNG")
-            image_data = buf.getvalue()
-        image_base64 = base64.b64encode(image_data).decode("utf-8")
-
-        # Send to LLM with simplified prompt and model gemma3:1b-it-fp16
-        logging.info(" sending screenshot to simplified LLM...")
-        llm_response = analyze_image_with_llm(
-            image_base64,
-            prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma3:4b"  # Changed from 1b to 4
-        )
-
-        speak_response(llm_response)
-
-    finally:
-        logging.info("Simplified pipeline finished")
-        pipeline_in_progress = False
-
-        # No restart needed - we're using threads now
 
 
 # ----------------------------------------------------------------
