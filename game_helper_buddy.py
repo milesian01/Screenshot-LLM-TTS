@@ -126,8 +126,9 @@ def analyze_image_with_llm(image_base64):
 def speak_response(text):
     """Convert text to child-friendly speech using thread-local TTS engine."""
     with tts_lock:
+        engine = None
         try:
-            comtypes.CoInitialize()  # Initialize COM for this thread
+            comtypes.CoInitialize()
             engine = pyttsx3.init()
             engine.setProperty('rate', 140)
             engine.setProperty('volume', 1.0)
@@ -139,16 +140,30 @@ def speak_response(text):
             engine.say(text)
             engine.runAndWait()
         except Exception as e:
-            logging.error("Error during speech synthesis", exc_info=True)
+            logging.error("TTS Error", exc_info=True)
         finally:
-            comtypes.CoUninitialize()  # Cleanup COM
+            try:
+                if engine:
+                    engine.stop()
+                    engine = None  # Force cleanup
+            except:
+                pass
+            comtypes.CoUninitialize()
 
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
+    last_processing_time = 0
+
     def hotkey_callback():
+        global last_processing_time
         try:
             if get_processing_status():
-                logging.info("F5 pressed but pipeline is busy; ignoring input.")
+                # Emergency reset if stuck >2 minutes
+                if time.time() - last_processing_time > 120:
+                    logging.warning("Force-resetting stuck processing state")
+                    set_processing_status(False)
+                
+                logging.info("F5 pressed but busy")
                 return
 
             logging.info("Hotkey pressed - starting analysis in new thread")
@@ -162,6 +177,8 @@ def hotkey_listener():
 
 def on_play_button_click():
     """Handle button press workflow"""
+    global last_processing_time
+    last_processing_time = time.time()
     try:
         logging.info("Button clicked - starting analysis")
         start_time = datetime.now()
@@ -189,20 +206,15 @@ def on_play_button_click():
             set_processing_status(False)  # Only clear flag AFTER speaking
 
 def keep_model_alive():
-    """Periodically sends a dummy request to keep the Ollama model loaded."""
+    """Periodically sends a lightweight request to keep the server alive."""
     while True:
-        time.sleep(2 * 60 - 10)  # Sleep 10 seconds less than 2 minutes
+        time.sleep(2 * 60 - 15)  # Sleep 1:45 minutes
         try:
-            logging.info("Sending keep-alive ping every 2 minutes to keep the model loaded.")
-            response = requests.post(
-                "http://192.168.50.250:30068/api/chat",
-                json={"model": "gemma3:27b-it-q8_0", "messages": []},
-                timeout=5
-            )
-            if response.status_code == 200:
-                logging.info("Keep-alive response received.")
+            # Use lightweight endpoint check instead of chat
+            response = requests.get("http://192.168.50.250:30068/", timeout=5)
+            logging.info(f"Keep-alive OK - Status {response.status_code}")
         except Exception as e:
-            logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
+            logging.error(f"Keep-alive failed: {str(e)}")
 
 def main():
     """Main application entry point"""
@@ -211,6 +223,17 @@ def main():
     
     # Start the keep-alive thread to keep the model loaded longer.
     threading.Thread(target=keep_model_alive, daemon=True).start()
+    
+    # Add watchdog thread
+    def status_watchdog():
+        while True:
+            time.sleep(5)
+            if get_processing_status():
+                logging.debug("Processing status: BUSY")
+            else:
+                logging.debug("Processing status: READY")
+    
+    threading.Thread(target=status_watchdog, daemon=True).start()
     
     logging.info("Listening for global hotkey (F5)...")
     keyboard.wait()  # Keeps the program running and listening for hotkeys.
