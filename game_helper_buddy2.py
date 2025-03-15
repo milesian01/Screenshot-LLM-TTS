@@ -143,28 +143,27 @@ def speak_response(text):
 # ----------------------------------------------------------------
 def keep_model_alive():
     """
-    Periodically sends a dummy request to keep the Ollama model loaded.
-    (e.g., empty chat request every ~2 minutes)
+    Periodically sends dummy requests to keep both Ollama models loaded.
     """
+    models = ["gemma3:27b-it-q8_0", "gemma3:1b-it-fp16"]
     while True:
-        # Sleep 10 seconds less than 2 minutes (110 seconds)
-        # so real pipeline calls won't overlap at exactly the same time
         time.sleep(110)
-        try:
-            logging.info("Sending keep-alive ping to keep the model loaded.")
-            response = requests.post(
-                "http://192.168.50.250:30068/api/chat",
-                json={"model": "gemma3:27b-it-q8_0", "messages": []},
-                timeout=10
-            )
-            if response.status_code == 200:
-                logging.info("Keep-alive response received.")
-            else:
-                logging.warning(f"Keep-alive got non-200: {response.status_code}")
-        except requests.exceptions.ReadTimeout:
-            logging.warning("Keep-alive ping timed out.")
-        except Exception as e:
-            logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
+        for model in models:
+            try:
+                logging.info(f"Sending keep-alive ping for model {model}.")
+                response = requests.post(
+                    "http://192.168.50.250:30068/api/chat",
+                    json={"model": model, "messages": []},
+                    timeout=10
+                )
+                if response.status_code == 200:
+                    logging.info(f"Keep-alive response for model {model} received.")
+                else:
+                    logging.warning(f"Keep-alive got non-200 for model {model}: {response.status_code}")
+            except requests.exceptions.ReadTimeout:
+                logging.warning(f"Keep-alive ping for model {model} timed out.")
+            except Exception as e:
+                logging.error(f"Keep-alive ping for model {model} failed: {str(e)}", exc_info=True)
 
 
 # ----------------------------------------------------------------
