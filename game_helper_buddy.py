@@ -32,7 +32,9 @@ def set_processing_status(status):
     """Set the processing status in a thread-safe manner"""
     global is_processing
     with processing_lock:
+        prev = is_processing
         is_processing = status
+        logging.debug(f"Status changed: {prev} -> {status}")
 
 def get_processing_status():
     """Get the processing status in a thread-safe manner"""
@@ -146,11 +148,12 @@ def speak_response(text):
         finally:
             try:
                 if engine:
-                    engine.stop()
-                    engine = None  # Force cleanup
+                    engine.endLoop()  # Add this first
+                    engine.stop()  # Then stop
             except:
                 pass
             comtypes.CoUninitialize()
+            time.sleep(0.1)  # Add small cleanup delay
 
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
@@ -158,20 +161,27 @@ def hotkey_listener():
     def hotkey_callback():
         global last_processing_time
         try:
+            logging.debug("F5 pressed - input received")  # Add debug log
+            
             if get_processing_status():
-                # Emergency reset check using GLOBAL timestamp  
-                if time.time() - last_processing_time > 120:
-                    logging.warning("Force-resetting stuck processing state")
+                elapsed = time.time() - last_processing_time
+                logging.debug(f"Busy check: {elapsed:.1f}s since start")
+                
+                # Immediate reset if stuck
+                if elapsed > 30:  # 30 second timeout
+                    logging.warning("Force-resetting processing state")
                     set_processing_status(False)
-                        
+                    return
+
                 logging.info("F5 pressed but busy")
                 return
 
-            logging.info("Hotkey pressed - starting analysis in new thread")
+            logging.info("Hotkey pressed - starting analysis")
             set_processing_status(True)
             threading.Thread(target=on_play_button_click, daemon=True).start()
+            
         except Exception as e:
-            logging.error("Hotkey handler crashed", exc_info=True)
+            logging.error("Hotkey error", exc_info=True)
             set_processing_status(False)
 
     keyboard.add_hotkey('f5', hotkey_callback)
