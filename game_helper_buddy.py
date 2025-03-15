@@ -159,8 +159,8 @@ def hotkey_listener():
 
 def on_play_button_click():
     """Handle button press workflow"""
-    global is_processing
     try:
+        set_processing_status(True)
         logging.info("Button clicked - starting analysis")
         start_time = datetime.now()
         screenshot = capture_screenshot()
@@ -191,8 +191,10 @@ def keep_model_alive():
         time.sleep(2 * 60 - 10)  # Sleep 10 seconds less than 2 minutes
         try:
             logging.info("Sending keep-alive ping every 2 minutes to keep the model loaded.")
-            # Use a different endpoint if available, or shorten timeout
-            requests.get("http://192.168.50.250:30068/", timeout=5)
+            requests.post(
+                "http://192.168.50.250:30068/api/chat",
+                json={"model": "gemma3:27b-it-q8_0", "messages": []},
+                timeout=5
             logging.info("Keep-alive response received.")
         except Exception as e:
             logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
