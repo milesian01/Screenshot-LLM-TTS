@@ -243,35 +243,6 @@ def pipeline_simple():
         import os, sys
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
-    pipeline_in_progress = True
-
-    try:
-        logging.info("Pipeline started: capturing screenshot...")
-
-        # Take a screenshot
-        screenshot = pyautogui.screenshot()
-        
-        # Encode to base64
-        with BytesIO() as buf:
-            screenshot.save(buf, format="PNG")
-            image_data = buf.getvalue()
-        image_base64 = base64.b64encode(image_data).decode("utf-8")
-
-        # Send to Ollama
-        logging.info("Sending screenshot to LLM...")
-        llm_response = analyze_image_with_llm(image_base64)
-
-        # Speak out result
-        speak_response(llm_response)
-
-
-    finally:
-        logging.info("Pipeline finished")
-        pipeline_in_progress = False  # Release the pipeline lock
-        
-        import os, sys
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-
 
 # ----------------------------------------------------------------
 # 5) Background keep-alive thread every 2 minutes
