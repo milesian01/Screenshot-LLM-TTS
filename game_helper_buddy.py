@@ -207,7 +207,6 @@ def on_play_button_click():
     
     # Ensure status reset even if processing fails
     try:
-    try:
         logging.info("Button clicked - starting analysis")
         start_time = datetime.now()
         screenshot = capture_screenshot()
