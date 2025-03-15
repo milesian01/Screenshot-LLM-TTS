@@ -28,13 +28,25 @@ is_processing = False
 
 last_processing_time = 0
 
-def set_processing_status(status):
-    """Set the processing status in a thread-safe manner"""
-    global is_processing
+def try_acquire_processing():
+    """Atomically check and acquire processing status, resetting if stuck."""
+    global is_processing, last_processing_time
+    current_time = time.time()
     with processing_lock:
-        prev = is_processing
-        is_processing = status
-        logging.debug(f"Status changed: {prev} -> {status}")
+        if is_processing:
+            # Check if processing is stuck
+            if current_time - last_processing_time > 30:
+                logging.warning("Force-resetting processing state due to timeout")
+                is_processing = False
+            else:
+                return False  # Still processing and not stuck
+        # Now check again after potential reset
+        if is_processing:
+            return False
+        # Acquire processing
+        is_processing = True
+        last_processing_time = current_time
+        return True
 
 def get_processing_status():
     """Get the processing status in a thread-safe manner"""
@@ -156,21 +168,14 @@ def hotkey_listener():
     """Listen/re-register hotkey periodically using Ctrl+Shift+F5."""
     def register_hotkey():
         def hotkey_callback():
-            global last_processing_time
             try:
                 logging.debug("Ctrl+Shift+F5 pressed - input received")
                 
-                if get_processing_status():
-                    elapsed = time.time() - last_processing_time
-                    logging.debug(f"Busy check: {elapsed:.1f}s since start")
-                    
-                    if elapsed > 30:
-                        logging.warning("Force-resetting processing state")
-                        set_processing_status(False)
-                        return
-
+                if not try_acquire_processing():
+                    logging.debug("Processing is busy, ignoring hotkey")
+                    return
+                
                 logging.info("Hotkey pressed - starting analysis")
-                set_processing_status(True)
                 threading.Thread(target=on_play_button_click, daemon=True).start()
                 
             except Exception as e:
@@ -199,6 +204,9 @@ def on_play_button_click():
     """Handle button press workflow"""
     global last_processing_time
     last_processing_time = time.time()
+    
+    # Ensure status reset even if processing fails
+    try:
     try:
         logging.info("Button clicked - starting analysis")
         start_time = datetime.now()
