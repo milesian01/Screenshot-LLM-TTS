@@ -40,6 +40,12 @@ def set_processing_status(status):
     with processing_lock:
         is_processing = status
 
+def get_processing_status():
+    """Get the processing status in a thread-safe manner"""
+    global is_processing
+    with processing_lock:
+        return is_processing
+
 # Set up basic logging
 logging.basicConfig(
     level=logging.INFO,
