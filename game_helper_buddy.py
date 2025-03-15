@@ -188,7 +188,7 @@ def hotkey_listener():
                 
             except Exception as e:
                 logging.error("Hotkey error", exc_info=True)
-                    set_processing_status(False)
+                set_processing_status(False)
 
         try:
             keyboard.remove_hotkey('ctrl+shift+f5')
