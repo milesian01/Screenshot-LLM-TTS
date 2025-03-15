@@ -132,10 +132,10 @@ def speak_response(text):
         except Exception as e:
             logging.error("Error during speech synthesis", exc_info=True)
         finally:
-# ----------------------------------------------------------------
-# 3) Revised keep-alive system
-# ----------------------------------------------------------------
-def keep_model_alive():
+            # Cleanup COM for this thread.
+            comtypes.CoUninitialize()
+            # Small delay to ensure proper resource cleanup.
+            time.sleep(0.2)
     """Single keep-alive pulse for all models"""
     models = ["gemma3:27b-it-q8_0", "gemma3:1b-it-fp16"]
     try:
@@ -211,18 +211,6 @@ def pipeline_simple():
         logging.error(f"Simple pipeline failed: {str(e)}", exc_info=True)
 
 
-# ----------------------------------------------------------------
-# 5) Background keep-alive thread every 2 minutes
-# ----------------------------------------------------------------
-def keep_alive_worker():
-    """
-    Runs in the background and sends keep-alive every 2 minutes when pipeline is not running.
-    """
-    while True:
-        time.sleep(120)  # Wait 2 minutes
-        if not pipeline_in_progress:
-            keep_model_alive()
-
 
 # ----------------------------------------------------------------
 # 6) Main entry point
@@ -231,7 +219,7 @@ def main():
     logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
     # Start background keep-alive thread
-    threading.Thread(target=keep_alive_worker, daemon=True).start()
+    threading.Thread(target=keep_alive_worker, name="KeepAlive", daemon=True).start()
 
     # Register hotkeys with lambda wrappers
     keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
