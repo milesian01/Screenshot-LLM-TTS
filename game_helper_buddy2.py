@@ -180,9 +180,33 @@ def pipeline():
         logging.info("Pipeline requested while another is running; ignoring.")
         return
 
-    if pipeline_in_progress:
-        logging.info("Pipeline requested while another is running; ignoring.")
-        return
+    pipeline_in_progress = True  # Set the flag
+
+    try:
+        logging.info("Pipeline started: capturing screenshot...")
+
+        # Take a screenshot
+        screenshot = pyautogui.screenshot()
+
+        # Encode to base64
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Send to Ollama
+        logging.info("Sending screenshot to LLM...")
+        llm_response = analyze_image_with_llm(image_base64)
+
+        # Speak out result
+        speak_response(llm_response)
+
+    finally:
+        logging.info("Pipeline finished")
+        pipeline_in_progress = False  # Release the lock
+
+        import os, sys
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
 def pipeline_simple():
     global pipeline_in_progress
