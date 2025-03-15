@@ -19,8 +19,9 @@ DEFAULT_SYSTEM_PROMPT = (
     "1. Carefully identify ALL text elements (dialogues, buttons, instructions, labels) "
     "2. Describe context (e.g., which character is speaking, where text appears) "
     "3. Explain in simple, playful language a kindergartener would understand "
-    "4. Add fun sound effects in parentheses where appropriate "
-    "5. Never mention you're an AI or analyzing an image. "
+    "4. Keep responses brief (1-2 sentences per text element) "
+    "5. Add fun sound effects in parentheses where appropriate "
+    "6. Never mention you're an AI or analyzing an image. "
     'Example: "Mario in his red hat says (boing!): \'Let\'s jump over the turtle!\' '
     'The green button says START - that\'s how we begin the adventure!"'
 )
@@ -78,6 +79,7 @@ def analyze_image_with_llm(
         logging.error(f"LLM request failed: {str(e)}", exc_info=True)
         return "Oops! Let's try that again. (error sound)"
 
+
 # ----------------------------------------------------------------
 # 2) TTS client functionality (adapted from tts_client.py)
 # ----------------------------------------------------------------
@@ -86,7 +88,7 @@ tts_lock = threading.Lock()
 
 def speak_response(text):
     """
-    Converts the provided text to speech with proper COM initialization.
+    Converts the provided text to speech using pyttsx3 with proper COM initialization.
     """
     with tts_lock:
         engine = None
@@ -96,6 +98,13 @@ def speak_response(text):
             engine = pyttsx3.init()
             engine.setProperty('rate', 140)
 
+            done_speaking = threading.Event()
+            def on_end(name, completed):
+                done_speaking.set()
+
+            engine.connect('finished-utterance', on_end)
+
+            logging.info(f"Speaking response: {text}")
             engine.say(text, 'response')
             engine.startLoop(False)
 
@@ -133,13 +142,74 @@ def send_keep_alive():
 
 
 # ----------------------------------------------------------------
-# 4) Main entry point
+# 4) Main pipeline to: (a) screenshot -> (b) LLM -> (c) TTS
+# ----------------------------------------------------------------
+pipeline_in_progress = False
+hotkey_registration = None
+
+def pipeline():
+    global pipeline_in_progress, hotkey_registration
+
+    if pipeline_in_progress:
+        # If we want to ignore re-trigger while in progress, just return.
+        # This ensures no overlapping triggers.
+        logging.info("Pipeline requested while another is running; ignoring.")
+        return
+
+    # Disable the pipeline trigger.
+    pipeline_in_progress = True
+    keyboard.remove_hotkey(hotkey_registration)
+
+    try:
+        logging.info("Pipeline started: capturing screenshot...")
+
+        # Take a screenshot
+        screenshot = pyautogui.screenshot()
+        
+        # Encode to base64
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Send to Ollama
+        logging.info("Sending screenshot to LLM...")
+        llm_response = analyze_image_with_llm(image_base64)
+
+        # Speak out result
+        speak_response(llm_response)
+
+        # Send keep-alive at the end of pipeline
+        send_keep_alive()
+
+    finally:
+        # Re-enable the pipeline trigger
+        hotkey_registration = keyboard.add_hotkey('f9', pipeline)
+        pipeline_in_progress = False
+        logging.info("Pipeline finished")
+
+
+# ----------------------------------------------------------------
+# 5) Background keep-alive thread every 2 minutes
+# ----------------------------------------------------------------
+def keep_alive_worker():
+    """
+    Runs in the background and sends keep-alive every 2 minutes when pipeline is not running.
+    """
+    while True:
+        time.sleep(120)  # Wait 2 minutes
+        if not pipeline_in_progress:
+            send_keep_alive()
+
+
+# ----------------------------------------------------------------
+# 6) Main entry point
 # ----------------------------------------------------------------
 def main():
     logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
     # Create background thread for keep-alives
-    threading.Thread(target=send_keep_alive, daemon=True).start()
+    threading.Thread(target=keep_alive_worker, daemon=True).start()
 
     # Register the hotkey
     global hotkey_registration
