@@ -227,11 +227,11 @@ def pipeline_simple():
         image_base64 = base64.b64encode(image_data).decode("utf-8")
 
         # Send to LLM with simplified prompt and model gemma3:1b-it-fp16
-        logging.info("Sending screenshot to simplified LLM...")
+        logging.info(" sending screenshot to simplified LLM...")
         llm_response = analyze_image_with_llm(
             image_base64,
             prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma3:1b-it-fp16"
+            model="gemma3:4b"  # Changed from 1b to 4
         )
 
         speak_response(llm_response)
