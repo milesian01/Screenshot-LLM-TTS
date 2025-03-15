@@ -8,7 +8,6 @@ import pyttsx3
 import comtypes
 import keyboard
 import pyautogui
-from datetime import datetime
 from io import BytesIO
 
 # ----------------------------------------------------------------
@@ -108,10 +107,18 @@ def speak_response(text):
             engine.setProperty('rate', 140)
             engine.setProperty('volume', 1.0)
             
-            # Optionally set a specific voice if desired:
-            # voices = engine.getProperty('voices')
-            # if len(voices) > 1:
-            #     engine.setProperty('voice', voices[1].id)
+            # Try to find a female voice (commonly Zira on Windows).
+            voices = engine.getProperty('voices')
+            selected_voice = None
+            for v in voices:
+                # Common Windows voice ID substrings: 'Zira', 'Jenny', 'Heera'
+                # Pick whichever "sounds" female or has female in the name.
+                if "zira" in v.name.lower() or "female" in v.name.lower():
+                    selected_voice = v
+                    break
+            
+            if selected_voice:
+                engine.setProperty('voice', selected_voice.id)
             
             logging.info(f"Speaking response: {text}")
             engine.say(text)
@@ -129,19 +136,28 @@ def speak_response(text):
 # ----------------------------------------------------------------
 # 3) Keep-alive functionality
 # ----------------------------------------------------------------
-def send_keep_alive():
+def keep_model_alive():
     """
-    Sends a keep-alive request to the Ollama server. Adjust the endpoint as needed.
+    Periodically sends a dummy request to keep the Ollama model loaded.
+    (e.g., empty chat request every ~2 minutes)
     """
-    try:
-        # Example keep-alive endpoint (customize as needed)
-        endpoint = "http://192.168.50.250:30068/api/keep_alive"
-        logging.info("Sending keep-alive request")
-        resp = requests.post(endpoint, timeout=5)
-        resp.raise_for_status()
-        logging.info("Keep-alive success")
-    except Exception as e:
-        logging.warning(f"Keep-alive request failed: {e}")
+    while True:
+        # Sleep 10 seconds less than 2 minutes (110 seconds)
+        # so real pipeline calls won't overlap at exactly the same time
+        time.sleep(110)
+        try:
+            logging.info("Sending keep-alive ping to keep the model loaded.")
+            response = requests.post(
+                "http://192.168.50.250:30068/api/chat",
+                json={"model": "gemma3:27b-it-q8_0", "messages": []},
+                timeout=5
+            )
+            if response.status_code == 200:
+                logging.info("Keep-alive response received.")
+            else:
+                logging.warning(f"Keep-alive got non-200: {response.status_code}")
+        except Exception as e:
+            logging.error("Keep-alive ping failed: " + str(e), exc_info=True)
 
 
 # ----------------------------------------------------------------
@@ -159,9 +175,11 @@ def pipeline():
         logging.info("Pipeline requested while another is running; ignoring.")
         return
 
-    # Disable the pipeline trigger.
+    if pipeline_in_progress:
+        logging.info("Pipeline requested while another is running; ignoring.")
+        return
+
     pipeline_in_progress = True
-    keyboard.remove_hotkey(hotkey_registration)
 
     try:
         logging.info("Pipeline started: capturing screenshot...")
@@ -186,10 +204,8 @@ def pipeline():
         send_keep_alive()
 
     finally:
-        # Re-enable the pipeline trigger
-        hotkey_registration = keyboard.add_hotkey('f9', pipeline)
-        pipeline_in_progress = False
         logging.info("Pipeline finished")
+        pipeline_in_progress = False  # Release the pipeline lock
 
 
 # ----------------------------------------------------------------
@@ -211,8 +227,8 @@ def keep_alive_worker():
 def main():
     logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
-    # Create background thread for keep-alives
-    threading.Thread(target=keep_alive_worker, daemon=True).start()
+    # Start background keep-alive thread
+    threading.Thread(target=keep_model_alive, daemon=True).start()
 
     # Register the hotkey
     global hotkey_registration
