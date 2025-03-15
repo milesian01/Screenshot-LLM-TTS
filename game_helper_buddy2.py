@@ -132,38 +132,31 @@ def speak_response(text):
         except Exception as e:
             logging.error("Error during speech synthesis", exc_info=True)
         finally:
-            # Cleanup COM for this thread.
-            comtypes.CoUninitialize()
-            # Small delay to ensure proper resource cleanup.
-            time.sleep(0.2)
-
-
 # ----------------------------------------------------------------
-# 3) Keep-alive functionality
+# 3) Revised keep-alive system
 # ----------------------------------------------------------------
 def keep_model_alive():
-    """
-    Periodically sends dummy requests to keep both Ollama models loaded.
-    """
+    """Single keep-alive pulse for all models"""
     models = ["gemma3:27b-it-q8_0", "gemma3:1b-it-fp16"]
-    while True:
-        time.sleep(110)
+    try:
+        logging.info("Sending keep-alive pings")
         for model in models:
-            try:
-                logging.info(f"Sending keep-alive ping for model {model}.")
-                response = requests.post(
-                    "http://192.168.50.250:30068/api/chat",
-                    json={"model": model, "messages": []},
-                    timeout=10
-                )
-                if response.status_code == 200:
-                    logging.info(f"Keep-alive response for model {model} received.")
-                else:
-                    logging.warning(f"Keep-alive got non-200 for model {model}: {response.status_code}")
-            except requests.exceptions.ReadTimeout:
-                logging.warning(f"Keep-alive ping for model {model} timed out.")
-            except Exception as e:
-                logging.error(f"Keep-alive ping for model {model} failed: {str(e)}", exc_info=True)
+            response = requests.post(
+                "http://192.168.50.250:30068/api/chat",
+                json={"model": model, "messages": []},
+                timeout=10
+            )
+            if response.status_code != 200:
+                logging.warning(f"Keep-alive failed for {model}: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Keep-alive failed: {str(e)}", exc_info=True)
+
+def keep_alive_worker():
+    """Runs keep-alives every 2 minutes when idle"""
+    while True:
+        time.sleep(120)  # 2 minutes
+        if not pipeline_in_progress:
+            keep_model_alive()
 
 
 # ----------------------------------------------------------------
