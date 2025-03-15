@@ -81,45 +81,48 @@ def analyze_image_with_llm(
 
 
 # ----------------------------------------------------------------
-# 2) TTS client functionality (adapted from tts_client.py)
+# 2) TTS client functionality 
 # ----------------------------------------------------------------
 import threading
+import logging
+import pyttsx3
+import comtypes
+import time
+
 tts_lock = threading.Lock()
 
 def speak_response(text):
     """
-    Converts the provided text to speech using pyttsx3 with proper COM initialization.
+    Converts the provided text to speech using pyttsx3 with thread-local COM initialization.
+    
+    Parameters:
+        text (str): The text to be spoken.
     """
     with tts_lock:
-        engine = None
         try:
-            comtypes.CoInitializeEx(comtypes.COINIT_APARTMENTTHREADED)
+            # Initialize COM for the current thread.
+            comtypes.CoInitialize()
             
+            # Initialize the TTS engine.
             engine = pyttsx3.init()
             engine.setProperty('rate', 140)
-
-            done_speaking = threading.Event()
-            def on_end(name, completed):
-                done_speaking.set()
-
-            engine.connect('finished-utterance', on_end)
-
+            engine.setProperty('volume', 1.0)
+            
+            # Optionally set a specific voice if desired:
+            # voices = engine.getProperty('voices')
+            # if len(voices) > 1:
+            #     engine.setProperty('voice', voices[1].id)
+            
             logging.info(f"Speaking response: {text}")
-            engine.say(text, 'response')
-            engine.startLoop(False)
-
-            while not done_speaking.wait(0.1):
-                pass
-
+            engine.say(text)
+            engine.runAndWait()
+            
         except Exception as e:
-            logging.error("TTS Error", exc_info=True)
+            logging.error("Error during speech synthesis", exc_info=True)
         finally:
-            if engine:
-                try:
-                    engine.endLoop()
-                    engine.stop()
-                except Exception as e:
-                    logging.error("Error stopping TTS engine", exc_info=True)
+            # Cleanup COM for this thread.
+            comtypes.CoUninitialize()
+            # Small delay to ensure proper resource cleanup.
             time.sleep(0.2)
 
 
