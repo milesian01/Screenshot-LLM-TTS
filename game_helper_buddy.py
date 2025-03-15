@@ -28,6 +28,14 @@ is_processing = False
 
 last_processing_time = 0
 
+def set_processing_status(status):
+    """Set the processing status in a thread-safe manner"""
+    global is_processing
+    with processing_lock:
+        prev = is_processing
+        is_processing = status
+        logging.debug(f"Status changed: {prev} -> {status}")
+
 def try_acquire_processing():
     """Atomically check and acquire processing status, resetting if stuck."""
     global is_processing, last_processing_time
@@ -180,7 +188,7 @@ def hotkey_listener():
                 
             except Exception as e:
                 logging.error("Hotkey error", exc_info=True)
-                set_processing_status(False)
+                    set_processing_status(False)
 
         try:
             keyboard.remove_hotkey('ctrl+shift+f5')
