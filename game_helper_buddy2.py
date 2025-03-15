@@ -170,10 +170,26 @@ def keep_model_alive():
 # 4) Main pipeline to: (a) screenshot -> (b) LLM -> (c) TTS
 # ----------------------------------------------------------------
 pipeline_in_progress = False
-hotkey_registration = None
+
+def pipeline_wrapper(target_func):
+    """Handles pipeline execution in a thread with state management"""
+    global pipeline_in_progress
+    
+    if pipeline_in_progress:
+        logging.info("Pipeline already running - ignoring request")
+        return
+    
+    def wrapper():
+        global pipeline_in_progress
+        try:
+            pipeline_in_progress = True
+            target_func()
+        finally:
+            pipeline_in_progress = False
+            
+    threading.Thread(target=wrapper, daemon=True).start()
 
 def pipeline():
-    global pipeline_in_progress, hotkey_registration
 
     if pipeline_in_progress:
         # If we want to ignore re-trigger while in progress, just return.
@@ -206,10 +222,7 @@ def pipeline():
         logging.info("Pipeline finished")
         pipeline_in_progress = False  # Release the lock
 
-        import os, sys
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-
-def pipeline_simple():
+        # No restart needed - we're using threads now
     global pipeline_in_progress
     if pipeline_in_progress:
         logging.info("Simplified pipeline requested while another is running; ignoring.")
@@ -241,8 +254,7 @@ def pipeline_simple():
         logging.info("Simplified pipeline finished")
         pipeline_in_progress = False
 
-        import os, sys
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        # No restart needed - we're using threads now
 
 
 # ----------------------------------------------------------------
@@ -265,18 +277,23 @@ def main():
     logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
     # Start background keep-alive thread
-    threading.Thread(target=keep_model_alive, daemon=True).start()
+    threading.Thread(target=keep_alive_worker, daemon=True).start()
 
-    # Register the hotkey with progress check
-    keyboard.on_press_key('f9', lambda event: pipeline() if not pipeline_in_progress else None)
+    # Register hotkeys with lambda wrappers
+    keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
+    keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple))
+
+    logging.info("Ready. Press F9/F12 for analysis. Ctrl+C to exit.")
     
-    # Register the simplified pipeline hotkey for F12 with progress check
-    keyboard.on_press_key('f12', lambda event: pipeline_simple() if not pipeline_in_progress else None)
-
-    logging.info("Ready. Press F9 to capture screenshot and run pipeline, or F12 for simplified analysis. Ctrl+C to exit.")
-
-    # Wait forever (until user kills process)
-    keyboard.wait()
+    try:
+        # Use event waiting instead of keyboard.wait()
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logging.info("\nCtrl+C received - exiting gracefully")
+    finally:
+        keyboard.unhook_all()
+        logging.info("Cleanup complete")
 
 
 if __name__ == "__main__":
