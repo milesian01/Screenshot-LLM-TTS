@@ -128,11 +128,11 @@ def analyze_image_with_llm(image_base64):
         return f"Oops! Let's try that again. (error sound)"
 
 def speak_response(text):
-    """Convert text to child-friendly speech using thread-local TTS engine."""
+    """Convert text to speech with proper COM initialization."""
     with tts_lock:
         engine = None
         try:
-            comtypes.CoInitialize()
+            comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
             engine = pyttsx3.init()
             engine.setProperty('rate', 140)
             engine.setProperty('volume', 1.0)
@@ -146,14 +146,10 @@ def speak_response(text):
         except Exception as e:
             logging.error("TTS Error", exc_info=True)
         finally:
-            try:
-                if engine:
-                    engine.endLoop()  # Add this first
-                    engine.stop()  # Then stop
-            except:
-                pass
+            if engine:
+                engine.stop()
+                engine.endLoop()
             comtypes.CoUninitialize()
-            time.sleep(0.1)  # Add small cleanup delay
 
 def hotkey_listener():
     """Listen for a global hotkey (F5) and trigger the screenshot analysis."""
