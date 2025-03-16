@@ -1,127 +1,72 @@
-import json
-import logging  # Add this line to import the logging module
-import tkinter as tk
-from tkinter import ttk
-import mss
-import keyboard
 import threading
-from PIL import Image
-import base64
-import requests
-import pyttsx3
-import io
 import time
-import comtypes
-
-# Initialize COM in the main thread
-comtypes.CoInitialize()
-
+import logging
+import base64
 from datetime import datetime
-import threading
+import requests
+import json
+import pyttsx3
+import comtypes
+import keyboard
+import pyautogui
+from io import BytesIO
 
-# Global locks for thread-safe operations
-tts_lock = threading.Lock()
-processing_lock = threading.Lock()
+# Global state
+pipeline_in_progress = False
 
-# Thread-safe processing status variable
-is_processing = False
-
-last_processing_time = 0
-
-def set_processing_status(status):
-    """Set the processing status in a thread-safe manner"""
-    global is_processing
-    with processing_lock:
-        prev = is_processing
-        is_processing = status
-        logging.debug(f"Status changed: {prev} -> {status}")
-
-def try_acquire_processing():
-    """Atomically check and acquire processing status, resetting if stuck."""
-    global is_processing, last_processing_time
-    current_time = time.time()
-    with processing_lock:
-        if is_processing:
-            # Check if processing is stuck
-            if current_time - last_processing_time > 30:
-                logging.warning("Force-resetting processing state due to timeout")
-                is_processing = False
-            else:
-                return False  # Still processing and not stuck
-        # Now check again after potential reset
-        if is_processing:
-            return False
-        # Acquire processing
-        is_processing = True
-        last_processing_time = current_time
-        return True
-
-def get_processing_status():
-    """Get the processing status in a thread-safe manner"""
-    global is_processing
-    with processing_lock:
-        return is_processing
-
-# Set up basic logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('game_helper_buddy.log'),
-        logging.StreamHandler()
-    ]
+# ----------------------------------------------------------------
+# 1) Ollama LLM client functionality (adapted from ollama_client.py)
+# ----------------------------------------------------------------
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a cheerful play assistant for a 5-year-old child. When shown a game screenshot: "
+    "1. Carefully identify ALL text elements (dialogues, buttons, instructions, labels) "
+    "2. Describe context (e.g., which character is speaking, where text appears) "
+    "3. Explain in simple, playful language a kindergartener would understand "
+    "4. Keep responses brief (1-2 sentences per text element) "
+    "5. Add fun sound effects in parentheses where appropriate "
+    "6. Never mention you're an AI or analyzing an image. "
+    'Example: "Mario in his red hat says (boing!): \'Let\'s jump over the turtle!\' '
+    'The green button says START - that\'s how we begin the adventure!"'
 )
 
-def capture_screenshot():
-    """Capture full screen screenshot and return as PIL Image"""
-    with mss.mss() as sct:
-        monitor = sct.monitors[1]  # Primary monitor
-        sct_img = sct.grab(monitor)
-        return Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+SIMPLE_SYSTEM_PROMPT = (
+    "Extract only the exact text from any speech or text bubbles in the image, including the NPC's name if visible. "
+    "**If there is no readable text, return 'No text detected.'** "
+    "**Do not repeat or rephrase the user's question.** "
+    "Do not include any additional commentary, explanation, or analysis."
+)
 
-def image_to_base64(img):
-    """Convert PIL Image to base64 string"""
-    buffered = io.BytesIO()
-    img.save(buffered, format="JPEG")
-    return base64.b64encode(buffered.getvalue()).decode("utf-8")
+def analyze_image_with_llm(
+    image_base64,
+    prompt=DEFAULT_SYSTEM_PROMPT,
+    endpoint="http://192.168.50.250:30068/api/chat",
+    model="gemma3:27b-it-q8_0",
+    timeout=60
+):
+    """
+    Sends a base64-encoded image to the Ollama LLM with a provided prompt.
+    """
+    logging.info("Starting LLM API request")
 
-def analyze_image_with_llm(image_base64):
-    """Send screenshot to Ollama LLM with crafted system prompt"""
-    
-    # Log request start
-    logging.info("Starting API request")
     start_time = datetime.now()
-    """Send screenshot to Ollama LLM with crafted system prompt"""
-    system_prompt = (
-        "You are a cheerful play assistant for a 5-year-old child. When shown a game screenshot: "
-        "1. Carefully identify ALL text elements (dialogues, buttons, instructions, labels) "
-        "2. Describe context (e.g., which character is speaking, where text appears) "
-        "3. Explain in simple, playful language a kindergartener would understand "
-        "4. Keep responses brief (1-2 sentences per text element) "
-        "5. Add fun sound effects in parentheses where appropriate "
-        "6. Never mention you're an AI or analyzing an image"
-        "Example: 'Mario in his red hat says (boing!): \"Let's jump over the turtle!\" "
-        "The green button says START - that's how we begin the adventure!'"
-    )
-    
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": prompt},
         {
             "role": "user",
             "content": "What's happening in my game right now? Please tell me!",
             "images": [image_base64]
         }
     ]
-    
+
     try:
         response = requests.post(
-            "http://192.168.50.250:30068/api/chat",
+            endpoint,
             json={
-                "model": "gemma3:27b-it-q8_0",
+                "model": model,
                 "messages": messages,
                 "stream": True
             },
-            timeout=60  # Optional timeout after 60 seconds
+            timeout=timeout
         )
         response.raise_for_status()
 
@@ -135,172 +80,223 @@ def analyze_image_with_llm(image_base64):
                 except json.JSONDecodeError:
                     continue
 
-        # Log successful response with timing
         elapsed = (datetime.now() - start_time).total_seconds()
-        logging.info(f"API request completed in {elapsed:.2f}s")
+        logging.info(f"LLM request completed in {elapsed:.2f}s")
         logging.debug(f"Accumulated response text: {accumulated_text}")
-
         return accumulated_text
-        
+
     except Exception as e:
-        # Log detailed error information
-        logging.error(f"API request failed: {str(e)}", exc_info=True)
-        return f"Oops! Let's try that again. (error sound)"
+        logging.error(f"LLM request failed: {str(e)}")
+        return "Oops! Let's try that again. (error sound)"
+
+
+# ----------------------------------------------------------------
+# 2) TTS client functionality 
+# ----------------------------------------------------------------
+import threading
+import logging
+import pyttsx3
+import comtypes
+import time
+
+tts_lock = threading.Lock()
 
 def speak_response(text):
-    """Convert text to speech with proper COM initialization."""
+    """
+    Converts the provided text to speech using pyttsx3 with thread-local COM initialization.
+    
+    Parameters:
+        text (str): The text to be spoken.
+    """
     with tts_lock:
-        engine = None
         try:
-            # Change to apartment-threaded COM initialization
-            comtypes.CoInitializeEx(comtypes.COINIT_APARTMENTTHREADED)
+            # Initialize COM for the current thread.
+            comtypes.CoInitialize()
             
-            # Add timeout for TTS initialization
+            # Initialize the TTS engine.
             engine = pyttsx3.init()
             engine.setProperty('rate', 140)
+            engine.setProperty('volume', 1.0)
             
-            # Create event for tracking completion
-            done_speaking = threading.Event()
-            
-            def on_end(name, completed):
-                done_speaking.set()
-            
-            engine.connect('finished-utterance', on_end)
-            
-            logging.info(f"Speaking response: {text}")
-            engine.say(text, 'response')
-            engine.startLoop(False)
-            
-            # Add timeout for speech output
-            while not done_speaking.wait(0.1):
-                if not get_processing_status():
-                    engine.endLoop()
+            # Try to find a female voice (commonly Zira on Windows).
+            voices = engine.getProperty('voices')
+            selected_voice = None
+            for v in voices:
+                # Common Windows voice ID substrings: 'Zira', 'Jenny', 'Heera'
+                # Pick whichever "sounds" female or has female in the name.
+                if "zira" in v.name.lower() or "female" in v.name.lower():
+                    selected_voice = v
                     break
             
+            if selected_voice:
+                engine.setProperty('voice', selected_voice.id)
+            
+            logging.info(f"Speaking response: {text}")
+            engine.say(text)
+            engine.runAndWait()
+            
         except Exception as e:
-            logging.error("TTS Error", exc_info=True)
+            logging.error("Error during speech synthesis")
         finally:
-            if engine:
-                try:
-                    engine.endLoop()
-                    engine.stop()
-                except:
-                    pass
-            # Remove CoUninitialize() here - let main thread handle COM
+            # Cleanup COM for this thread.
+            comtypes.CoUninitialize()
+            # Small delay to ensure proper resource cleanup.
             time.sleep(0.2)
 
-def hotkey_listener():
-    """Listen/re-register hotkey periodically using Ctrl+Shift+F5."""
-    def register_hotkey():
-        def hotkey_callback():
-            try:
-                logging.debug("Ctrl+Shift+F5 pressed - input received")
-                
-                if not try_acquire_processing():
-                    logging.debug("Processing is busy, ignoring hotkey")
-                    return
-                
-                logging.info("Hotkey pressed - starting analysis")
-                threading.Thread(target=on_play_button_click, daemon=True).start()
-                
-            except Exception as e:
-                logging.error("Hotkey error", exc_info=True)
-                set_processing_status(False)
-
-        try:
-            keyboard.remove_hotkey('ctrl+shift+f5')
-        except KeyError:
-            pass
-        keyboard.add_hotkey('ctrl+shift+f5', hotkey_callback)
-
-    def hotkey_watchdog():
-        while True:
-            time.sleep(5)
-            try:
-                register_hotkey()
-                logging.debug("Hotkey re-registered")
-            except Exception as e:
-                logging.error("Hotkey watchdog failed", exc_info=True)
-
-    threading.Thread(target=hotkey_watchdog, daemon=True).start()
-    register_hotkey()
-
-def on_play_button_click():
-    """Handle button press workflow"""
-    global last_processing_time
-    last_processing_time = time.time()
-    
-    # Ensure status reset even if processing fails
+def play_ready_sound():
+    """Play a brief confirmation sound using TTS"""
     try:
-        logging.info("Button clicked - starting analysis")
-        start_time = datetime.now()
-        screenshot = capture_screenshot()
-        
-        filename = f"debug_screenshot_{int(time.time())}.jpg"
-        screenshot.save(filename)
-        logging.info(f"Screenshot saved as {filename}")
-        image_b64 = image_to_base64(screenshot)
-        
-        response_text = analyze_image_with_llm(image_b64)
-        
-        elapsed = (datetime.now() - start_time).total_seconds()
-        logging.info(f"Analysis completed in {elapsed:.2f}s")
+        # Use minimal TTS setup for the sound cue
+        comtypes.CoInitialize()
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 250)  # Faster speaking rate
+        engine.say("(ding!)")
+        engine.runAndWait()
     except Exception as e:
-        logging.error("Error during analysis", exc_info=True)
-        response_text = "Oops! Let's try that again."
+        logging.debug(f"Ready sound error: {str(e)}")
     finally:
-        # Move status update INSIDE the speaking block
         try:
-            speak_response(response_text)
-        except Exception as e:
-            logging.error("Error during speech synthesis", exc_info=True)
-        finally:
-            # Add additional cleanup
-            try:
-                keyboard.restore_state()  # Reset keyboard state
-            except:
-                pass
-                
-            # Ensure status reset even if multiple errors occur
-            set_processing_status(False)
-            logging.info("Processing status cleared")
+            comtypes.CoUninitialize()
+        except:
+            pass
 
+
+
+# ----------------------------------------------------------------
+# 3) Keep-alive functionality
+# ----------------------------------------------------------------
 def keep_model_alive():
-    """Keep-alive with shorter interval"""
-    while True:
-        time.sleep(55)  # Reduced from 2 minutes to 55 seconds
+    """Single keep-alive pulse for all models"""
+    models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
+    for model in models:
         try:
-            # Use lightweight endpoint check instead of chat
-            response = requests.get("http://192.168.50.250:30068/", timeout=5)
-            logging.info(f"Keep-alive OK - Status {response.status_code}")
+            logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
+            response = requests.post(
+                "http://192.168.50.250:30068/api/chat",
+                json={"model": model, "messages": []},
+                timeout=10
+            )
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logging.warning(f"Keep-alive HTTP error for {model}: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Keep-alive connection issue for {model}: {str(e)}")
         except Exception as e:
-            logging.error(f"Keep-alive failed: {str(e)}")
+            logging.warning(f"Keep-alive unexpected error for {model}: {str(e)}")
 
+def keep_alive_worker():
+    """Runs keep-alives every 2 minutes"""
+    while True:
+        time.sleep(120)  # 2 minutes
+        keep_model_alive()
+
+# ----------------------------------------------------------------
+# 4) Pipeline management
+# ----------------------------------------------------------------
+pipeline_in_progress = False
+
+def pipeline_wrapper(target_func):
+    """Handles pipeline execution in a thread with state management"""
+    global pipeline_in_progress
+    
+    # Use the lock for both check AND state update
+    with threading.Lock():
+        if pipeline_in_progress:
+            logging.info("Pipeline busy - ignoring request")
+            return
+        pipeline_in_progress = True  # Set flag BEFORE starting thread
+
+    def wrapper():
+        global pipeline_in_progress
+        try:
+            target_func()
+        finally:
+            with threading.Lock():
+                pipeline_in_progress = False
+            play_ready_sound()  # Add this line
+    threading.Thread(target=wrapper, daemon=True).start()
+
+# ----------------------------------------------------------------
+# 4) Revised pipeline functions using wrapper
+# ----------------------------------------------------------------
+def pipeline():
+    """Full analysis pipeline"""
+    try:
+        logging.info("Pipeline started: capturing screenshot...")
+        
+        # Capture screenshot
+        screenshot = pyautogui.screenshot()
+        
+        # Encode to base64
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Send to LLM with default prompt
+        logging.info("Sending screenshot to LLM...")
+        llm_response = analyze_image_with_llm(image_base64)
+
+        # Speak result
+        speak_response(llm_response)
+
+    except Exception as e:
+        logging.error(f"Pipeline failed: {str(e)}")
+
+def pipeline_simple():
+    """Simplified text extraction pipeline"""
+    try:
+        logging.info("Simplified pipeline started...")
+        
+        # Capture screenshot (same as regular pipeline)
+        screenshot = pyautogui.screenshot()
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Send to LLM with simple prompt and 4b model
+        llm_response = analyze_image_with_llm(
+            image_base64,
+            prompt=SIMPLE_SYSTEM_PROMPT,
+            model="gemma3:4b"  # Verify this is the correct model name
+        )
+
+        speak_response(llm_response)
+
+    except Exception as e:
+        logging.error(f"Simple pipeline failed: {str(e)}")
+
+
+
+# ----------------------------------------------------------------
+# 6) Main entry point
+# ----------------------------------------------------------------
 def main():
-    """Main application entry point"""
-    # Add this verification
-    logging.info(f"Initial processing state: {get_processing_status()}")
-    logging.info(f"Initial last_processing_time: {last_processing_time}")
-    
-    # Register the global hotkey in the main thread.
-    hotkey_listener()
-    
-    # Start the keep-alive thread to keep the model loaded longer.
-    threading.Thread(target=keep_model_alive, daemon=True).start()
-    
-    # Add watchdog thread
-    def status_watchdog():
-        while True:
-            time.sleep(5)
-            if get_processing_status():
-                logging.debug("Processing status: BUSY")
-            else:
-                logging.debug("Processing status: READY")
-    
-    threading.Thread(target=status_watchdog, daemon=True).start()
-    
-    logging.info("Listening for global hotkey (Ctrl+Shift+F5)...")
-    keyboard.wait()  # Keeps the program running and listening for hotkeys.
+    logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
-if __name__ == '__main__':
+    # Start background keep-alive thread
+    threading.Thread(target=keep_alive_worker, name="KeepAlive", daemon=True).start()
+
+    # Register hotkeys with lambda wrappers
+    keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
+    keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple))
+    
+    # Debug hotkeys - remove after verification
+    keyboard.add_hotkey('f9', lambda: logging.info("F9 pressed"))
+    keyboard.add_hotkey('f12', lambda: logging.info("F12 pressed"))
+
+    logging.info("Ready. Press F9/F12 for analysis. ESC to exit.")
+    
+    try:
+        # Block on explicit key press instead of Ctrl+C
+        keyboard.wait('esc')
+    except KeyboardInterrupt:
+        pass
+    finally:
+        keyboard.unhook_all()
+        logging.info("Cleanup complete")
+
+
+if __name__ == "__main__":
     main()
