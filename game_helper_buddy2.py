@@ -193,20 +193,21 @@ def pipeline_wrapper(target_func):
     """Handles pipeline execution in a thread with state management"""
     global pipeline_in_progress
     
-    # Add lock to prevent race conditions
+    # Use the lock for both check AND state update
     with threading.Lock():
         if pipeline_in_progress:
-            logging.info("Pipeline already running - ignoring request")
+            logging.info("Pipeline busy - ignoring request")
             return
-        
+        pipeline_in_progress = True  # Set flag BEFORE starting thread
+
     def wrapper():
         global pipeline_in_progress
         try:
-            pipeline_in_progress = True
             target_func()
         finally:
-            pipeline_in_progress = False
-            
+            with threading.Lock():
+                pipeline_in_progress = False
+                
     threading.Thread(target=wrapper, daemon=True).start()
 
 # ----------------------------------------------------------------
