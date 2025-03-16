@@ -142,6 +142,19 @@ def speak_response(text):
             comtypes.CoUninitialize()
             # Small delay to ensure proper resource cleanup.
             time.sleep(0.2)
+
+def play_ready_sound():
+    """Play a brief confirmation sound using TTS"""
+    try:
+        # Use minimal TTS setup for the sound cue
+        comtypes.CoInitialize()
+        engine = pyttsx3.init()
+        engine.setProperty('rate', 250)  # Faster speaking rate
+        engine.say("(ding!)")
+        engine.runAndWait()
+        comtypes.CoUninitialize()
+    except Exception as e:
+        logging.debug(f"Ready sound error: {str(e)}")
     """Single keep-alive pulse for all models"""
     models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
     try:
@@ -210,7 +223,7 @@ def pipeline_wrapper(target_func):
         finally:
             with threading.Lock():
                 pipeline_in_progress = False
-                
+            play_ready_sound()  # Add this line
     threading.Thread(target=wrapper, daemon=True).start()
 
 # ----------------------------------------------------------------
