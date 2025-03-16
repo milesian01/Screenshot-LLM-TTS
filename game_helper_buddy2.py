@@ -164,7 +164,7 @@ def speak_response(text):
 # ----------------------------------------------------------------
 def keep_model_alive():
     """Single keep-alive pulse for all models"""
-    models = ["gemma3:27b-it-q8_0", "gemma3:1b-it-fp16"]
+    models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
     try:
         logging.info("Sending keep-alive pings")
         for model in models:
