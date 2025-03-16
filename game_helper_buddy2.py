@@ -152,23 +152,13 @@ def play_ready_sound():
         engine.setProperty('rate', 250)  # Faster speaking rate
         engine.say("(ding!)")
         engine.runAndWait()
-        comtypes.CoUninitialize()
     except Exception as e:
         logging.debug(f"Ready sound error: {str(e)}")
-    """Single keep-alive pulse for all models"""
-    models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
-    try:
-        logging.info("Sending keep-alive pings")
-        for model in models:
-            response = requests.post(
-                "http://192.168.50.250:30068/api/chat",
-                json={"model": model, "messages": []},
-                timeout=10
-            )
-            if response.status_code != 200:
-                logging.warning(f"Keep-alive failed for {model}: {response.status_code}")
-    except Exception as e:
-        logging.error(f"Keep-alive failed: {str(e)}", exc_info=True)
+    finally:
+        try:
+            comtypes.CoUninitialize()
+        except:
+            pass
 
 
 
@@ -180,7 +170,7 @@ def keep_model_alive():
     models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
     for model in models:
         try:
-            logging.info(f"Sending keep-alive ping for {model}")
+            logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
             response = requests.post(
                 "http://192.168.50.250:30068/api/chat",
                 json={"model": model, "messages": []},
@@ -190,9 +180,9 @@ def keep_model_alive():
         except requests.exceptions.HTTPError as e:
             logging.warning(f"Keep-alive HTTP error for {model}: {str(e)}")
         except requests.exceptions.RequestException as e:
-            logging.warning(f"Keep-alive connection error for {model}: {str(e)}")
+            logging.warning(f"Keep-alive connection issue for {model}: {str(e)}")
         except Exception as e:
-            logging.warning(f"Unexpected keep-alive error for {model}: {str(e)}")
+            logging.warning(f"Keep-alive unexpected error for {model}: {str(e)}")
 
 def keep_alive_worker():
     """Runs keep-alives every 2 minutes"""
