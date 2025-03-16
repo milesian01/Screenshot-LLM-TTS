@@ -165,18 +165,21 @@ def speak_response(text):
 def keep_model_alive():
     """Single keep-alive pulse for all models"""
     models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
-    try:
-        logging.info("Sending keep-alive pings")
-        for model in models:
+    for model in models:
+        try:
+            logging.info(f"Sending keep-alive ping for {model}")
             response = requests.post(
                 "http://192.168.50.250:30068/api/chat",
                 json={"model": model, "messages": []},
                 timeout=10
             )
-            if response.status_code != 200:
-                logging.warning(f"Keep-alive failed for {model}: {response.status_code}")
-    except Exception as e:
-        logging.error(f"Keep-alive failed: {str(e)}", exc_info=True)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logging.warning(f"Keep-alive HTTP error for {model}: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Keep-alive connection error for {model}: {str(e)}")
+        except Exception as e:
+            logging.warning(f"Unexpected keep-alive error for {model}: {str(e)}")
 
 def keep_alive_worker():
     """Runs keep-alives every 2 minutes"""
