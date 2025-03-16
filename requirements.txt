@@ -2,5 +2,4 @@ keyboard
 pyttsx3==2.90
 requests==2.31.0
 Pillow==10.2.0
-mss==8.0.3
 comtypes
