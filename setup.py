@@ -21,8 +21,18 @@ setup(
     },
     options={
         'bdist_wininst': {
-            'title': "Game Helper Buddy Installer",
-            'install_script': None  # Use default install script; customize if needed
+            'title': "Game Helper Buddy",
+            'install_script': None,
+            'runtime_libs': ['comtypes',
+                             'keyboard',
+                             'pyautogui'],
+            'runtime_module': ['_thread',
+                             '_threading',
+                             'socket',
+                             'queue',
+                             'time',
+                             'sys',
+                             'os']
         }
     }
 )
