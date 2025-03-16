@@ -30,7 +30,10 @@ DEFAULT_SYSTEM_PROMPT = (
 )
 
 SIMPLE_SYSTEM_PROMPT = (
-    "Extract only the exact text from any speech or text bubbles in the image, including the NPC's name if visible. Do not include any additional commentary, explanation, or analysis."
+    "Extract only the exact text from any speech or text bubbles in the image, including the NPC's name if visible. "
+    "**If there is no readable text, return 'No text detected.'** "
+    "**Do not repeat or rephrase the user's question.** "
+    "Do not include any additional commentary, explanation, or analysis."
 )
 
 def analyze_image_with_llm(
