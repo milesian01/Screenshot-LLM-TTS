@@ -140,7 +140,7 @@ def speak_response(text):
             # Small delay to ensure proper resource cleanup.
             time.sleep(0.2)
     """Single keep-alive pulse for all models"""
-    models = ["gemma3:27b-it-q8_0", "gemma3:1b-it-fp16"]
+    models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
     try:
         logging.info("Sending keep-alive pings")
         for model in models:
