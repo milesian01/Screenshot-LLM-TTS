@@ -274,14 +274,18 @@ def main():
     # Register hotkeys with lambda wrappers
     keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
     keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple))
+    
+    # Debug hotkeys - remove after verification
+    keyboard.add_hotkey('f9', lambda: logging.info("F9 pressed"))
+    keyboard.add_hotkey('f12', lambda: logging.info("F12 pressed"))
 
-    logging.info("Ready. Press F9/F12 for analysis. Ctrl+C to exit.")
+    logging.info("Ready. Press F9/F12 for analysis. ESC to exit.")
     
     try:
-        # Keep the event loop active
-        keyboard.wait()  # Replace the while/sleep loop with this
+        # Block on explicit key press instead of Ctrl+C
+        keyboard.wait('esc')
     except KeyboardInterrupt:
-        logging.info("\nCtrl+C received - exiting gracefully")
+        pass
     finally:
         keyboard.unhook_all()
         logging.info("Cleanup complete")
