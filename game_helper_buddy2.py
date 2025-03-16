@@ -176,11 +176,10 @@ def keep_model_alive():
         logging.error(f"Keep-alive failed: {str(e)}", exc_info=True)
 
 def keep_alive_worker():
-    """Runs keep-alives every 2 minutes when idle"""
+    """Runs keep-alives every 2 minutes"""
     while True:
         time.sleep(120)  # 2 minutes
-        if not pipeline_in_progress:
-            keep_model_alive()
+        keep_model_alive()
 
 # ----------------------------------------------------------------
 # 4) Pipeline management
@@ -191,10 +190,12 @@ def pipeline_wrapper(target_func):
     """Handles pipeline execution in a thread with state management"""
     global pipeline_in_progress
     
-    if pipeline_in_progress:
-        logging.info("Pipeline already running - ignoring request")
-        return
-    
+    # Add lock to prevent race conditions
+    with threading.Lock():
+        if pipeline_in_progress:
+            logging.info("Pipeline already running - ignoring request")
+            return
+        
     def wrapper():
         global pipeline_in_progress
         try:
@@ -274,9 +275,8 @@ def main():
     logging.info("Ready. Press F9/F12 for analysis. Ctrl+C to exit.")
     
     try:
-        # Use event waiting instead of keyboard.wait()
-        while True:
-            time.sleep(1)
+        # Keep the event loop active
+        keyboard.wait()  # Replace the while/sleep loop with this
     except KeyboardInterrupt:
         logging.info("\nCtrl+C received - exiting gracefully")
     finally:
