@@ -86,7 +86,7 @@ def analyze_image_with_llm(
         return accumulated_text
 
     except Exception as e:
-        logging.error(f"LLM request failed: {str(e)}", exc_info=True)
+        logging.error(f"LLM request failed: {str(e)}")
         return "Oops! Let's try that again. (error sound)"
 
 
@@ -136,7 +136,7 @@ def speak_response(text):
             engine.runAndWait()
             
         except Exception as e:
-            logging.error("Error during speech synthesis", exc_info=True)
+            logging.error("Error during speech synthesis")
         finally:
             # Cleanup COM for this thread.
             comtypes.CoUninitialize()
@@ -241,7 +241,7 @@ def pipeline():
         speak_response(llm_response)
 
     except Exception as e:
-        logging.error(f"Pipeline failed: {str(e)}", exc_info=True)
+        logging.error(f"Pipeline failed: {str(e)}")
 
 def pipeline_simple():
     """Simplified text extraction pipeline"""
@@ -265,7 +265,7 @@ def pipeline_simple():
         speak_response(llm_response)
 
     except Exception as e:
-        logging.error(f"Simple pipeline failed: {str(e)}", exc_info=True)
+        logging.error(f"Simple pipeline failed: {str(e)}")
 
 
 
