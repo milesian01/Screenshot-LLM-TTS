@@ -3,6 +3,11 @@
 # Ignore log files
 *.log
 
+# PyInstaller build artifacts
+/dist/
+/build/
+*.spec
+
 # Ignore image files
 *.jpg
 *.jpeg
