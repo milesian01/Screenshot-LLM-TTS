@@ -289,8 +289,9 @@ def main():
     logging.info("Ready. Press F9/F12 for analysis. ESC to exit.")
     
     try:
-        # Block on explicit key press instead of Ctrl+C
-        keyboard.wait('esc')
+        # Block indefinitely to keep the program running
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
         pass
     finally:
