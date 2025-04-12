@@ -196,9 +196,6 @@ def register_hotkeys():
     # Register your analysis and simple pipeline hotkeys
     keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
     keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple))
-    # (Optional) Debug log registration for F9 and F12
-    keyboard.add_hotkey('f9', lambda: logging.info("F9 pressed"))
-    keyboard.add_hotkey('f12', lambda: logging.info("F12 pressed"))
 
 # ----------------------------------------------------------------
 # 4) Pipeline management
