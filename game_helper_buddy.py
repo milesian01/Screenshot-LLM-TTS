@@ -316,7 +316,7 @@ def pipeline_simple_with_rephrase():
         simplified_text = analyze_image_with_llm(
             base64.b64encode(original_text.encode()).decode("utf-8"),  # Encode as if it's image input
             prompt=REPHRASE_FOR_KID_PROMPT,
-            model="gemma27b"
+            model="gemma3:27b-it-q8_0"
         )
 
         speak_response(simplified_text)
