@@ -196,6 +196,9 @@ def register_hotkeys():
     # Register your analysis and simple pipeline hotkeys
     keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
     keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple))
+    
+    # Optional: Send one-time keep-alive when hotkeys are (re)registered
+    keep_model_alive()
 
 # ----------------------------------------------------------------
 # 4) Pipeline management
@@ -282,8 +285,8 @@ def pipeline_simple():
 def main():
     logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
 
-    # Start background keep-alive thread
-    threading.Thread(target=keep_alive_worker, name="KeepAlive", daemon=True).start()
+    # Optional: Send one-time keep-alive when hotkeys are (re)registered
+    # threading.Thread(target=keep_alive_worker, name="KeepAlive", daemon=True).start()
 
     # Register hotkeys on startup
     register_hotkeys()
