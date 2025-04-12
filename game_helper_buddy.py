@@ -293,10 +293,17 @@ def main():
 
     logging.info("Ready. Press F9/F12 for analysis. ESC to exit.")
     
+    last_time = time.time()
     try:
         # Block indefinitely to keep the program running
         while True:
             time.sleep(1)
+            current_time = time.time()
+            # If more than 2 seconds have passed, it's likely the system resumed from sleep
+            if current_time - last_time > 2:
+                logging.info("Detected system resume; re-registering hotkeys.")
+                register_hotkeys()
+            last_time = current_time
     except KeyboardInterrupt:
         pass
     finally:
