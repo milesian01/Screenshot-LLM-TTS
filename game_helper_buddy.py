@@ -184,11 +184,11 @@ def keep_model_alive():
         except Exception as e:
             logging.warning(f"Keep-alive unexpected error for {model}: {str(e)}")
 
-def keep_alive_worker():
-    """Runs keep-alives every 2 minutes"""
-    while True:
-        time.sleep(120)  # 2 minutes
-        keep_model_alive()
+# def keep_alive_worker():
+#     """Runs keep-alives every 2 minutes"""
+#     while True:
+#         time.sleep(120)  # 2 minutes
+#         keep_model_alive()
 
 def register_hotkeys():
     # Clear any existing hotkeys
