@@ -167,7 +167,7 @@ def play_ready_sound():
 # ----------------------------------------------------------------
 def keep_model_alive():
     """Single keep-alive pulse for all models"""
-    models = ["gemma3:27b-it-q8_0", "gemma3:4b"]
+    models = ["gemma3:27b-it-q8_0", "gemma3:27b-it-q8_0"]
     for model in models:
         try:
             logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
@@ -266,7 +266,7 @@ def pipeline_simple():
         llm_response = analyze_image_with_llm(
             image_base64,
             prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma3:4b"  # Verify this is the correct model name
+            model="gemma3:27b-it-q8_0"
         )
 
         speak_response(llm_response)
