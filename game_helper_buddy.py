@@ -278,7 +278,7 @@ def pipeline_simple():
         llm_response = analyze_image_with_llm(
             image_base64,
             prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma27b"
+            model="gemma3:27b-it-q8_0"
         )
 
         speak_response(llm_response)
