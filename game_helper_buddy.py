@@ -175,13 +175,13 @@ def play_ready_sound():
 # ----------------------------------------------------------------
 def keep_model_alive():
     """Single keep-alive pulse for all models"""
-    models = ["gemma3:27b-it-q8_0", "gemma3:27b-it-q8_0"]
+    models = ["gemma27b", "gemma27b"]
     for model in models:
         try:
             logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
             response = requests.post(
                 "http://192.168.50.250:30068/api/chat",
-                json={"model": model, "messages": []},
+                json={"model": "gemma27b", "messages": []},
                 timeout=10
             )
             response.raise_for_status()
@@ -278,7 +278,7 @@ def pipeline_simple():
         llm_response = analyze_image_with_llm(
             image_base64,
             prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma3:27b-it-q8_0"
+            model="gemma27b"
         )
 
         speak_response(llm_response)
@@ -316,7 +316,7 @@ def pipeline_simple_with_rephrase():
         simplified_text = analyze_image_with_llm(
             base64.b64encode(original_text.encode()).decode("utf-8"),  # Encode as if it's image input
             prompt=REPHRASE_FOR_KID_PROMPT,
-            model="gemma3:4b"
+            model="gemma27b"
         )
 
         speak_response(simplified_text)
