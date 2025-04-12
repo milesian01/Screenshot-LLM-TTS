@@ -36,6 +36,14 @@ SIMPLE_SYSTEM_PROMPT = (
     "Do not include any additional commentary, explanation, or analysis."
 )
 
+REPHRASE_FOR_KID_PROMPT = (
+    "You will be shown some game dialogue text.\n"
+    "If any words or phrases are too hard for a 5-year-old child, rewrite the text in simpler, playful language.\n"
+    "If the original text is already simple, return it as-is.\n"
+    "**Respond with just the simplified version, nothing else.**\n"
+    "**Keep it short so the game can keep moving.**"
+)
+
 def analyze_image_with_llm(
     image_base64,
     prompt=DEFAULT_SYSTEM_PROMPT,
@@ -195,6 +203,7 @@ def register_hotkeys():
     keyboard.unhook_all_hotkeys()
     # Register your analysis and simple pipeline hotkeys
     keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
+    keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase))
     keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple))
     
     # Optional: Send one-time keep-alive when hotkeys are (re)registered
@@ -276,6 +285,44 @@ def pipeline_simple():
 
     except Exception as e:
         logging.error(f"Simple pipeline failed: {str(e)}")
+
+def pipeline_simple_with_rephrase():
+    """Text extraction + simplified rephrasing for kids"""
+    try:
+        logging.info("Pipeline (F10) started: extracting text...")
+
+        # Screenshot and encode
+        screenshot = pyautogui.screenshot()
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Step 1: Extract original text
+        original_text = analyze_image_with_llm(
+            image_base64,
+            prompt=SIMPLE_SYSTEM_PROMPT,
+            model="gemma3:4b"
+        )
+
+        speak_response(original_text)
+
+        # If no text was found, skip rephrasing
+        if "no text detected" in original_text.lower():
+            return
+
+        # Step 2: Rephrase if needed
+        logging.info("Requesting rephrased version for child...")
+        simplified_text = analyze_image_with_llm(
+            base64.b64encode(original_text.encode()).decode("utf-8"),  # Encode as if it's image input
+            prompt=REPHRASE_FOR_KID_PROMPT,
+            model="gemma3:4b"
+        )
+
+        speak_response(simplified_text)
+
+    except Exception as e:
+        logging.error(f"F10 pipeline failed: {str(e)}")
 
 
 
