@@ -302,7 +302,7 @@ def pipeline_simple_with_rephrase():
         original_text = analyze_image_with_llm(
             image_base64,
             prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma3:4b"
+            model="gemma3:27b-it-q8_0"
         )
 
         speak_response(original_text)
