@@ -178,7 +178,7 @@ def play_ready_sound():
 # ----------------------------------------------------------------
 def keep_model_alive():
     """Single keep-alive pulse for all models"""
-    models = ["gemma27b", "gemma27b"]
+    models = ["gemma3:27b-it-q8_0"]
     for model in models:
         try:
             logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
