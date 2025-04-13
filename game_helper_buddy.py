@@ -184,7 +184,7 @@ def keep_model_alive():
             logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
             response = requests.post(
                 "http://192.168.50.250:30068/api/chat",
-                json={"model": "gemma27b", "messages": []},
+                json={"model": model, "messages": []},
                 timeout=10
             )
             response.raise_for_status()
