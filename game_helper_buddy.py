@@ -200,7 +200,7 @@ def keep_model_alive():
 
 def register_hotkeys():
     # Clear any existing hotkeys
-    keyboard.unhook_all_hotkeys()
+    keyboard.clear_all_hotkeys()
     # Register your analysis and simple pipeline hotkeys
     keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
     keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase))
