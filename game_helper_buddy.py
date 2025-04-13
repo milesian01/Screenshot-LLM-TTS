@@ -345,7 +345,7 @@ def main():
     # Register hotkeys on startup
     register_hotkeys()
 
-    logging.info("Ready. Press F9/F12 for analysis. ESC to exit.")
+    logging.info("Ready! Press F9 (playful summary), F10 (simple + rephrase), or F12 (exact text only).")
     
     last_time = time.time()
     try:
