@@ -14,6 +14,9 @@ from io import BytesIO
 # Global state
 pipeline_in_progress = False
 
+# Global list for hotkey handles
+registered_hotkeys = []
+
 # ----------------------------------------------------------------
 # 1) Ollama LLM client functionality (adapted from ollama_client.py)
 # ----------------------------------------------------------------
@@ -199,12 +202,16 @@ def keep_model_alive():
 #         keep_model_alive()
 
 def register_hotkeys():
-    # Clear any existing hotkeys
-    keyboard.clear_all_hotkeys()
-    # Register your analysis and simple pipeline hotkeys
-    keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline))
-    keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase))
-    keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple))
+    global registered_hotkeys
+    # Remove previously registered hotkeys
+    for handle in registered_hotkeys:
+        keyboard.remove_hotkey(handle)
+    registered_hotkeys = []
+
+    # Register your analysis and simple pipeline hotkeys and store their handles
+    registered_hotkeys.append(keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline)))
+    registered_hotkeys.append(keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))
+    registered_hotkeys.append(keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple)))
     
     # Optional: Send one-time keep-alive when hotkeys are (re)registered
     keep_model_alive()
