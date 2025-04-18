@@ -10,12 +10,19 @@ import comtypes
 import keyboard
 import pyautogui
 from io import BytesIO
+import sys
+import os
 
 # Global state
 pipeline_in_progress = False
 
 # Global list for hotkey handles
 registered_hotkeys = []
+
+def restart_program():
+    logging.info("Detected system resume; restarting program.")
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
 
 # ----------------------------------------------------------------
 # 1) Ollama LLM client functionality (adapted from ollama_client.py)
@@ -355,8 +362,9 @@ def main():
             current_time = time.time()
             # If more than 2 seconds have passed, it's likely the system resumed from sleep
             if current_time - last_time > 2:
-                logging.info("Detected system resume; re-registering hotkeys.")
-                register_hotkeys()
+                logging.info("System resume detected. Waiting 15 seconds before restart.")
+                time.sleep(15)
+                restart_program()
             last_time = current_time
     except KeyboardInterrupt:
         pass
