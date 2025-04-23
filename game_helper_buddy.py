@@ -12,6 +12,8 @@ import pyautogui
 from io import BytesIO
 import sys
 import os
+from obsws_python import obsws, requests as obs_requests
+import subprocess
 
 # Global state
 pipeline_in_progress = False
@@ -300,6 +302,39 @@ def pipeline_simple():
     except Exception as e:
         logging.error(f"Simple pipeline failed: {str(e)}")
 
+def handle_obs_recording_on_resume():
+    import time
+    host = "localhost"
+    port = 4455  # default OBS websocket port
+    try:
+        obs_client = obsws(host, port, password="")
+        obs_client.connect()
+    except Exception as e:
+        logging.error(f"Failed to connect to OBS WebSocket: {e}")
+        logging.info("OBS not running. Starting OBS Studio...")
+        try:
+            obs_path = r"C:\Program Files\obs-studio\bin\64bit\obs64.exe"  # adjust the path if necessary
+            subprocess.Popen(obs_path)
+            time.sleep(10)  # wait for OBS to launch
+            obs_client = obsws(host, port, password="")
+            obs_client.connect()
+        except Exception as ex:
+            logging.error(f"Failed to start OBS Studio: {ex}")
+            return
+    try:
+        # Check if OBS is currently recording
+        status = obs_client.call(obs_requests.GetRecordingStatus())
+        if status.getRecording():
+            logging.info("OBS is currently recording. Stopping current recording...")
+            obs_client.call(obs_requests.StopRecording())
+            time.sleep(5)  # pause briefly after stopping recording
+        logging.info("Starting a new OBS recording...")
+        obs_client.call(obs_requests.StartRecording())
+    except Exception as e:
+        logging.error(f"Error handling OBS recording: {e}")
+    finally:
+        obs_client.disconnect()
+
 def pipeline_simple_with_rephrase():
     """Text extraction + simplified rephrasing for kids"""
     try:
@@ -362,7 +397,9 @@ def main():
             current_time = time.time()
             # If more than 2 seconds have passed, it's likely the system resumed from sleep
             if current_time - last_time > 2:
-                logging.info("System resume detected. Waiting 15 seconds before restart.")
+                logging.info("System resume detected. Handling OBS recording before restart.")
+                handle_obs_recording_on_resume()
+                logging.info("Waiting 15 seconds before restarting program.")
                 time.sleep(15)
                 restart_program()
             last_time = current_time
