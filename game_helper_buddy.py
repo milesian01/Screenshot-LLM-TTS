@@ -12,7 +12,7 @@ import pyautogui
 from io import BytesIO
 import sys
 import os
-from obsws_python import obsws, requests as obs_requests
+from obsws_python import ReqClient
 import subprocess
 
 # Global state
