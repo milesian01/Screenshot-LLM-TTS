@@ -1,42 +1,32 @@
 #!/usr/bin/env python3
-import asyncio
-import logging
-from obsws_python import ReqClient, requests
+import time
+from obsws_python import ReqClient
 
-# Configure logging to see debug output
-logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
-
-async def test_obs_recording():
-    host = "localhost"
-    port = 4455
-    password = ""  # No password setup in OBS WebSocket
-
-    # Initialize the OBS WebSocket client
-    client = ReqClient(host=host, port=port, password=password)
+def main():
+    # adjust host/port/password if needed
+    client = ReqClient(host="localhost", port=4455, password="", timeout=5)
     try:
-        logging.info("Connecting to OBS WebSocket...")
-        await client.connect()
-        logging.info("Connected successfully.")
-        
-        # Get and print current recording status
-        status = await client.call(requests.GetRecordingStatus())
-        logging.info(f"Recording active: {status.get_recording()}")
+        # 1) Check connection by fetching version
+        version = client.get_version()
+        print(f"Connected to OBS v{version.obs_version} (ws v{version.obs_web_socket_version})")
 
-        # Start recording
-        logging.info("Starting recording for 5 seconds...")
-        await client.start_record()
-        await asyncio.sleep(5)
+        # 2) Query current recording status
+        status = client.get_record_status()
+        print(f"Recording active? {status.output_active}")
 
-        # Stop recording
-        logging.info("Stopping recording...")
-        await client.stop_record()
+        # 3) Start a 5-second recording
+        print("→ Starting recording…")
+        client.start_record()
+        time.sleep(5)
 
+        # 4) Stop recording
+        print("→ Stopping recording…")
+        client.stop_record()
+        print("Done.")
     except Exception as e:
-        logging.error(f"Error during OBS WebSocket test: {e}")
+        print(f"ERROR: {e}")
     finally:
-        # Always disconnect cleanly
-        await client.disconnect()
-        logging.info("Disconnected from OBS WebSocket.")
+        client.disconnect()
 
 if __name__ == "__main__":
-    asyncio.run(test_obs_recording())
+    main()
