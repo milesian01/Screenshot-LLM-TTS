@@ -304,36 +304,36 @@ def pipeline_simple():
 
 def handle_obs_recording_on_resume():
     import time
-    host = "localhost"
-    port = 4455  # default OBS websocket port
+    host, port = "localhost", 4455
+    # 1) Try to connect
     try:
-        obs_client = obsws(host, port, password="")
-        obs_client.connect()
+        client = ReqClient(host=host, port=port, password="", timeout=5)
     except Exception as e:
-        logging.error(f"Failed to connect to OBS WebSocket: {e}")
-        logging.info("OBS not running. Starting OBS Studio...")
+        logging.error(f"OBS connect failed: {e}")
+        logging.info("Launching OBS...")
         try:
-            obs_path = r"C:\Program Files\obs-studio\bin\64bit\obs64.exe"  # adjust the path if necessary
-            subprocess.Popen(obs_path)
-            time.sleep(10)  # wait for OBS to launch
-            obs_client = obsws(host, port, password="")
-            obs_client.connect()
+            subprocess.Popen(r"C:\Program Files\obs-studio\bin\64bit\obs64.exe")
+            time.sleep(10)
+            client = ReqClient(host=host, port=port, password="", timeout=5)
         except Exception as ex:
-            logging.error(f"Failed to start OBS Studio: {ex}")
+            logging.error(f"OBS launch/connect failed: {ex}")
             return
+
     try:
-        # Check if OBS is currently recording
-        status = obs_client.call(obs_requests.GetRecordingStatus())
-        if status.getRecording():
-            logging.info("OBS is currently recording. Stopping current recording...")
-            obs_client.call(obs_requests.StopRecording())
-            time.sleep(5)  # pause briefly after stopping recording
-        logging.info("Starting a new OBS recording...")
-        obs_client.call(obs_requests.StartRecording())
+        # 2) If already recording, stop it
+        status = client.get_record_status()
+        if status.output_active:
+            logging.info("Stopping existing recording…")
+            client.stop_record()
+            time.sleep(5)
+
+        # 3) Start a fresh recording
+        logging.info("Starting new recording…")
+        client.start_record()
     except Exception as e:
-        logging.error(f"Error handling OBS recording: {e}")
+        logging.error(f"OBS control error: {e}")
     finally:
-        obs_client.disconnect()
+        client.disconnect()
 
 def pipeline_simple_with_rephrase():
     """Text extraction + simplified rephrasing for kids"""
