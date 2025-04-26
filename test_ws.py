@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import logging
-from obsws_python import ReqClient
+from obsws_python import ReqClient, requests
 
 # Configure logging to see debug output
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
@@ -15,11 +15,11 @@ async def test_obs_recording():
     client = ReqClient(host=host, port=port, password=password)
     try:
         logging.info("Connecting to OBS WebSocket...")
-        await ws.connect()
+        await client.connect()
         logging.info("Connected successfully.")
         
         # Get and print current recording status
-        status = await ws.call(requests.GetRecordingStatus())
+        status = await client.call(requests.GetRecordingStatus())
         logging.info(f"Recording active: {status.get_recording()}")
 
         # Start recording
@@ -35,7 +35,7 @@ async def test_obs_recording():
         logging.error(f"Error during OBS WebSocket test: {e}")
     finally:
         # Always disconnect cleanly
-        await ws.disconnect()
+        await client.disconnect()
         logging.info("Disconnected from OBS WebSocket.")
 
 if __name__ == "__main__":
