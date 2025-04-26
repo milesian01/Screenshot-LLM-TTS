@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import logging
-from obsws_python import OBSSDK, requests
+from obsws_python import ReqClient
 
 # Configure logging to see debug output
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
@@ -12,7 +12,7 @@ async def test_obs_recording():
     password = ""  # No password setup in OBS WebSocket
 
     # Initialize the OBS WebSocket client
-    ws = OBSSDK(host=host, port=port, password=password)
+    client = ReqClient(host=host, port=port, password=password)
     try:
         logging.info("Connecting to OBS WebSocket...")
         await ws.connect()
@@ -24,12 +24,12 @@ async def test_obs_recording():
 
         # Start recording
         logging.info("Starting recording for 5 seconds...")
-        await ws.call(requests.StartRecording())
+        await client.start_record()
         await asyncio.sleep(5)
 
         # Stop recording
         logging.info("Stopping recording...")
-        await ws.call(requests.StopRecording())
+        await client.stop_record()
 
     except Exception as e:
         logging.error(f"Error during OBS WebSocket test: {e}")
