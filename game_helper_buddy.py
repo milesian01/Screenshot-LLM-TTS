@@ -320,12 +320,22 @@ def handle_obs_recording_on_resume():
             return
 
     try:
-        # 2) If already recording, stop it
+        # 2) If already recording, stop it and wait for OBS to finalize
         status = client.get_record_status()
         if status.output_active:
             logging.info("Stopping existing recording…")
             client.stop_record()
-            time.sleep(5)
+            # wait until OBS reports output_active=False (up to 60s)
+            t0 = time.time()
+            while True:
+                st = client.get_record_status()
+                if not st.output_active:
+                    logging.info("Previous recording finalized.")
+                    break
+                if time.time() - t0 > 60:
+                    logging.warning("Timeout waiting for stop_record to complete.")
+                    break
+                time.sleep(1)
 
         # 3) Start a fresh recording
         logging.info("Starting new recording…")
