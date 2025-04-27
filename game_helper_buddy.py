@@ -305,6 +305,11 @@ def pipeline_simple():
 def handle_obs_recording_on_resume():
     import time
     host, port = "localhost", 4455
+
+    # small buffer to let OBS & system stabilize after wake
+    logging.info("Waiting 10s for system/OBS to stabilize after wake")
+    time.sleep(10)
+
     # 1) Try to connect
     try:
         client = ReqClient(host=host, port=port, password="", timeout=5)
@@ -320,16 +325,24 @@ def handle_obs_recording_on_resume():
             return
 
     try:
-        # 2) If already recording, stop it and wait for OBS to finalize
+        # Check and stop any existing recording, then wait (with retries)
         status = client.get_record_status()
         if status.output_active:
             logging.info("Stopping existing recording…")
             client.stop_record()
-            # now wait until OBS truly finishes writing (user unlock will let this complete)
-            logging.info("Waiting for OBS to finalize previous recording (unlock your session)…")
-            while client.get_record_status().output_active:
-                time.sleep(1)
-            logging.info("Previous recording finalized.")
+            logging.info("Waiting for OBS to finalize previous recording…")
+            max_wait, retries = 30, 3
+            for attempt in range(retries):
+                start = time.time()
+                while client.get_record_status().output_active and time.time() - start < max_wait:
+                    time.sleep(1)
+                if not client.get_record_status().output_active:
+                    logging.info("Previous recording finalized.")
+                    break
+                logging.warning(f"Still active after {max_wait}s, retrying stop_record (attempt {attempt+2}/{retries})…")
+                client.stop_record()
+            else:
+                logging.error("Failed to stop recording after multiple attempts.")
 
         # 3) Start a fresh recording
         logging.info("Starting new recording…")
