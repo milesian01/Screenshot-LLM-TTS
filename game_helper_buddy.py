@@ -439,7 +439,7 @@ def main():
     # Register hotkeys on startup
     register_hotkeys()
 
-    logging.info("Ready! Press F9 (playful summary), F10 (simple + rephrase), or F12 (exact text only).")
+    logging.info("Ready! Press F9 (playful summary), F10 or ` (simple + rephrase), F12 (exact text only), or Pause (explain & learn).")
     
     last_time = time.time()
     try:
