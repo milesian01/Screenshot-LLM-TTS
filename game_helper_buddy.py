@@ -232,7 +232,6 @@ def register_hotkeys():
     registered_hotkeys.append(keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))
     registered_hotkeys.append(keyboard.add_hotkey('pause', lambda: pipeline_wrapper(pipeline_explain_words)))
     registered_hotkeys.append(keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple)))
-    registered_hotkeys.append(keyboard.add_hotkey('`', lambda: pipeline_wrapper(pipeline_explain_words)))
     
     # Optional: Send one-time keep-alive when hotkeys are (re)registered
     keep_model_alive()
