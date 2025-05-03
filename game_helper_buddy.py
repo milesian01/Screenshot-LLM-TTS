@@ -220,6 +220,7 @@ def register_hotkeys():
     # Register your analysis and simple pipeline hotkeys and store their handles
     registered_hotkeys.append(keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline)))
     registered_hotkeys.append(keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))
+    registered_hotkeys.append(keyboard.add_hotkey('pause', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))
     registered_hotkeys.append(keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple)))
     
     # Optional: Send one-time keep-alive when hotkeys are (re)registered
