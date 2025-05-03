@@ -48,6 +48,12 @@ SIMPLE_SYSTEM_PROMPT = (
     "Do not include any additional commentary, explanation, or analysis."
 )
 
+EXPLAIN_WORDS_PROMPT = (
+    "You're a helpful play buddy! The child saw this game moment but didn't understand all the words. "
+    "Take a look and explain what it means in a very simple and fun way a 5-year-old would get. "
+    "Keep it short and cheerful, like you're chatting with a young friend."
+)
+
 REPHRASE_FOR_KID_PROMPT = (
     "You will be shown some game dialogue text.\n"
     "If any words or phrases are too hard for a 5-year-old child, rewrite the text in simpler, playful language.\n"
@@ -222,6 +228,7 @@ def register_hotkeys():
     registered_hotkeys.append(keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))
     registered_hotkeys.append(keyboard.add_hotkey('pause', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))
     registered_hotkeys.append(keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple)))
+    registered_hotkeys.append(keyboard.add_hotkey('`', lambda: pipeline_wrapper(pipeline_explain_words)))
     
     # Optional: Send one-time keep-alive when hotkeys are (re)registered
     keep_model_alive()
@@ -390,6 +397,30 @@ def pipeline_simple_with_rephrase():
 
     except Exception as e:
         logging.error(f"F10 pipeline failed: {str(e)}")
+
+def pipeline_explain_words():
+    """Capture screenshot and explain tricky words simply for a child"""
+    try:
+        logging.info("Pipeline (~) started: capturing screenshot...")
+
+        # Screenshot and encode
+        screenshot = pyautogui.screenshot()
+        with BytesIO() as buf:
+            screenshot.save(buf, format="PNG")
+            image_data = buf.getvalue()
+        image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+        # Send to LLM with explain prompt
+        llm_response = analyze_image_with_llm(
+            image_base64,
+            prompt=EXPLAIN_WORDS_PROMPT,
+            model="gemma3:27b-it-q8_0"
+        )
+
+        speak_response(llm_response)
+
+    except Exception as e:
+        logging.error(f"Explain-words pipeline failed: {str(e)}")
 
 
 
