@@ -214,6 +214,21 @@ def keep_model_alive():
         except Exception as e:
             logging.warning(f"Keep-alive unexpected error for {model}: {str(e)}")
 
+# New helper to actively load the model via /api/generate
+def warmup_model(model="gemma3:27b-it-q8_0"):
+    """Trigger the model to load by sending a short generate request."""
+    try:
+        logging.info(f"Warming up model {model}")
+        response = requests.post(
+            "http://192.168.50.250:30068/api/generate",
+            json={"model": model, "prompt": "hi", "stream": False},
+            timeout=60,
+        )
+        response.raise_for_status()
+        logging.debug("Model warmup complete")
+    except Exception as e:
+        logging.warning(f"Model warmup failed for {model}: {e}")
+
 # def keep_alive_worker():
 #     """Runs keep-alives every 2 minutes"""
 #     while True:
@@ -234,8 +249,9 @@ def register_hotkeys():
     registered_hotkeys.append(keyboard.add_hotkey('pause', lambda: pipeline_wrapper(pipeline_explain_words)))
     registered_hotkeys.append(keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple)))
     
-    # Optional: Send one-time keep-alive when hotkeys are (re)registered
-    keep_model_alive()
+    # Optional: Send keep-alive and warmup without blocking startup
+    threading.Thread(target=keep_model_alive, daemon=True).start()
+    threading.Thread(target=warmup_model, daemon=True).start()
 
 # ----------------------------------------------------------------
 # 4) Pipeline management
