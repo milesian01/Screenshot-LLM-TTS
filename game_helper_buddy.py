@@ -49,13 +49,13 @@ SIMPLE_SYSTEM_PROMPT = (
 )
 
 EXPLAIN_WORDS_PROMPT = (
-    "You're a friendly and fun learning buddy for a 5-year-old child. The child saw this moment in a game "
-    "and didn't understand some of the words. Your job is to explain what's happening clearly, and also teach "
-    "any tricky or new words like a caring teacher would.\n"
-    "Keep it cheerful and short. Use examples or simple comparisons when helpful.\n"
-    "Always use playful language and sound effects (like *boing!* or *whoosh!*) to make it fun.\n"
+    "You're a friendly and fun learning buddy for a 5-and-a-half-year-old child. The child saw this game dialogue text "
+    "and didn't understand some of the words. Your job is to identify these words, then teach "
+    "them like a caring teacher would, but be concise and to the point. No need to greet the child, just get into the words.\n"
+    "Keep it cheerful and as short as possible, just get right into the words you identify. Use examples or simple comparisons when helpful.\n"
+    "Always use playful language to make it fun, but do not use sound effects. Do not bold text in your response.\n"
     "Never say you're an AI or analyzing the image. Just be a buddy helping out.\n"
-    "Focus on helping the child learn something new in a kind and encouraging way."
+    "Focus on helping the child learn something new in a kind, concise, and encouraging way."
 )
 
 REPHRASE_FOR_KID_PROMPT = (
@@ -69,7 +69,7 @@ REPHRASE_FOR_KID_PROMPT = (
 def analyze_image_with_llm(
     image_base64,
     prompt=DEFAULT_SYSTEM_PROMPT,
-    endpoint="http://192.168.50.250:30068/api/chat",
+    endpoint="http://192.168.50.250:11434/api/chat",
     model="gemma3:27b-it-q8_0",
     timeout=60
 ):
@@ -145,7 +145,7 @@ def speak_response(text):
             
             # Initialize the TTS engine.
             engine = pyttsx3.init()
-            engine.setProperty('rate', 140)
+            engine.setProperty('rate', 200)
             engine.setProperty('volume', 1.0)
             
             # Try to find a female voice (commonly Zira on Windows).
@@ -202,7 +202,7 @@ def keep_model_alive():
         try:
             logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
             response = requests.post(
-                "http://192.168.50.250:30068/api/chat",
+                "http://192.168.50.250:11434/api/chat",
                 json={"model": model, "messages": []},
                 timeout=10
             )
@@ -231,7 +231,7 @@ def register_hotkeys():
     registered_hotkeys.append(keyboard.add_hotkey('f9', lambda: pipeline_wrapper(pipeline)))
     registered_hotkeys.append(keyboard.add_hotkey('f10', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))
     registered_hotkeys.append(keyboard.add_hotkey('`', lambda: pipeline_wrapper(pipeline_simple_with_rephrase)))  # <-- make sure this is here
-    registered_hotkeys.append(keyboard.add_hotkey('pause', lambda: pipeline_wrapper(pipeline_explain_words)))
+    registered_hotkeys.append(keyboard.add_hotkey('\\', lambda: pipeline_wrapper(pipeline_explain_words)))
     registered_hotkeys.append(keyboard.add_hotkey('f12', lambda: pipeline_wrapper(pipeline_simple)))
     
     # Optional: Send one-time keep-alive when hotkeys are (re)registered
