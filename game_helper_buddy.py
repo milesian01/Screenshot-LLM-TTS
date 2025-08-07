@@ -70,7 +70,7 @@ def analyze_image_with_llm(
     image_base64,
     prompt=DEFAULT_SYSTEM_PROMPT,
     endpoint="http://192.168.50.250:11434/api/chat",
-    model="gemma3:27b-it-q8_0",
+    model="gemma3_27b_40k:latest",
     timeout=60
 ):
     """
@@ -197,7 +197,7 @@ def play_ready_sound():
 # ----------------------------------------------------------------
 def keep_model_alive():
     """Single keep-alive pulse for all models"""
-    models = ["gemma3:27b-it-q8_0"]
+    models = ["gemma3_27b_40k:latest"]
     for model in models:
         try:
             logging.debug(f"Sending keep-alive ping for {model}")  # Changed to debug
@@ -215,7 +215,7 @@ def keep_model_alive():
             logging.warning(f"Keep-alive unexpected error for {model}: {str(e)}")
 
 # New helper to actively load the model via /api/generate
-def warmup_model(model="gemma3:27b-it-q8_0"):
+def warmup_model(model="gemma3_27b_40k:latest"):
     """Trigger the model to load by sending a short generate request."""
     try:
         logging.info(f"Warming up model {model}")
@@ -322,7 +322,7 @@ def pipeline_simple():
         llm_response = analyze_image_with_llm(
             image_base64,
             prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma3:27b-it-q8_0"
+            model="gemma3_27b_40k:latest"
         )
 
         speak_response(llm_response)
@@ -396,7 +396,7 @@ def pipeline_simple_with_rephrase():
         original_text = analyze_image_with_llm(
             image_base64,
             prompt=SIMPLE_SYSTEM_PROMPT,
-            model="gemma3:27b-it-q8_0"
+            model="gemma3_27b_40k:latest"
         )
 
         speak_response(original_text)
@@ -410,7 +410,7 @@ def pipeline_simple_with_rephrase():
         simplified_text = analyze_image_with_llm(
             base64.b64encode(original_text.encode()).decode("utf-8"),  # Encode as if it's image input
             prompt=REPHRASE_FOR_KID_PROMPT,
-            model="gemma3:27b-it-q8_0"
+            model="gemma3_27b_40k:latest"
         )
 
         speak_response(simplified_text)
@@ -434,7 +434,7 @@ def pipeline_explain_words():
         llm_response = analyze_image_with_llm(
             image_base64,
             prompt=EXPLAIN_WORDS_PROMPT,
-            model="gemma3:27b-it-q8_0"
+            model="gemma3_27b_40k:latest"
         )
 
         speak_response(llm_response)
